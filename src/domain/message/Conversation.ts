@@ -60,6 +60,61 @@ export class Conversation {
   }
 
   /**
+   * 저장소에 남아 있는 것으로부터 되살린다.
+   *
+   * 앱을 껐다 켤 때마다 쓴다. 메시지를 하나씩 `accept` 하며 되살릴 수도
+   * 있지만 두 가지가 어긋난다.
+   *
+   *   · 이미 읽은 메시지까지 안 읽음으로 다시 세어진다
+   *   · 만 건이면 앱을 켜는 데 그만큼 걸린다
+   *
+   * 그래서 저장소가 요약한 값을 받아 한 번에 세운다.
+   */
+  static restore(input: RestoreInput): Result<Conversation, DomainError> {
+    if (!Number.isInteger(input.nextOutgoingSeq) || input.nextOutgoingSeq < 1) {
+      return err(
+        domainError(
+          'invalid-value',
+          '내 다음 순번은 1 이상이어야 한다',
+          'nextOutgoingSeq',
+        ),
+      )
+    }
+
+    if (!Number.isInteger(input.unreadCount) || input.unreadCount < 0) {
+      return err(
+        domainError('invalid-value', '읽지 않은 개수는 0 이상이어야 한다', 'unreadCount'),
+      )
+    }
+
+    const progress = new Map<PeerId, PeerProgress>()
+    for (const [peer, seqs] of input.seenSeqsByPeer) {
+      if (seqs.length === 0) continue
+
+      const maxSeq = Math.max(...seqs)
+      const seen = new Set(seqs)
+      const missing = new Set<number>()
+      for (let n = 1; n < maxSeq; n += 1) {
+        if (!seen.has(n)) missing.add(n)
+      }
+      progress.set(peer, { maxSeq, missing })
+    }
+
+    // 최근 식별자는 되살리지 않는다. 중복을 막는 최종 보루는 저장소이고,
+    // 여기 있는 건 저장소까지 가지 않으려는 최적화일 뿐이다.
+    return ok(
+      new Conversation(
+        input.me,
+        [],
+        new Set(),
+        progress,
+        input.unreadCount,
+        input.nextOutgoingSeq,
+      ),
+    )
+  }
+
+  /**
    * 메시지를 받아들인다. 이미 있는 것이면 조용히 버린다.
    *
    * 버리는 것도 정상이다. 길을 갈아탈 때나 받았다는 답이 유실됐을 때
@@ -204,6 +259,14 @@ function advance(current: PeerProgress | undefined, seq: number): PeerProgress {
 
   missing.delete(seq)
   return { maxSeq: current.maxSeq, missing }
+}
+
+export interface RestoreInput {
+  readonly me: PeerId
+  /** 사람마다 지금까지 받은 순번들 */
+  readonly seenSeqsByPeer: ReadonlyMap<PeerId, readonly number[]>
+  readonly nextOutgoingSeq: number
+  readonly unreadCount: number
 }
 
 export const conversationLimits = { recentIds: RECENT_ID_LIMIT } as const

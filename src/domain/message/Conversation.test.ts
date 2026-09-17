@@ -8,7 +8,7 @@ import {
   ulidSequence,
 } from '@test/support/factories'
 import { describe, expect, it } from 'vitest'
-import { conversationLimits } from './Conversation'
+import { Conversation, conversationLimits } from './Conversation'
 
 describe('메시지 받아들이기', () => {
   it('처음 보는 메시지를 받아들인다', () => {
@@ -184,6 +184,84 @@ describe('내가 쓸 순번', () => {
     ).conversation
 
     expect(conversation.nextOutgoingSeq).toBe(1)
+  })
+})
+
+describe('저장소에서 되살리기', () => {
+  it('내 순번을 이어간다', () => {
+    const restored = Conversation.restore({
+      me: ME,
+      seenSeqsByPeer: new Map(),
+      nextOutgoingSeq: 8,
+      unreadCount: 0,
+    })
+
+    expect(restored.ok && restored.value.nextOutgoingSeq).toBe(8)
+  })
+
+  it('받은 순번에서 빈틈을 찾아낸다', () => {
+    const restored = Conversation.restore({
+      me: ME,
+      seenSeqsByPeer: new Map([[HER, [1, 2, 5]]]),
+      nextOutgoingSeq: 1,
+      unreadCount: 0,
+    })
+
+    expect(restored.ok && restored.value.missingSeqs(HER)).toEqual([3, 4])
+    expect(restored.ok && restored.value.highestSeqFrom(HER)).toBe(5)
+  })
+
+  it('읽지 않은 개수를 그대로 받는다', () => {
+    // 메시지를 하나씩 되살리면 이미 읽은 것까지 안 읽음이 된다
+    const restored = Conversation.restore({
+      me: ME,
+      seenSeqsByPeer: new Map([[HER, [1, 2, 3]]]),
+      nextOutgoingSeq: 1,
+      unreadCount: 1,
+    })
+
+    expect(restored.ok && restored.value.unreadCount).toBe(1)
+  })
+
+  it('순번이 하나도 없는 사람은 건너뛴다', () => {
+    const restored = Conversation.restore({
+      me: ME,
+      seenSeqsByPeer: new Map([[HER, []]]),
+      nextOutgoingSeq: 1,
+      unreadCount: 0,
+    })
+
+    expect(restored.ok && restored.value.highestSeqFrom(HER)).toBe(0)
+  })
+
+  it.each([
+    ['내 순번이 0이면', 0, 0],
+    ['내 순번이 음수면', -1, 0],
+    ['읽지 않은 개수가 음수면', 1, -1],
+  ])('%s 거절한다', (_label, nextOutgoingSeq, unreadCount) => {
+    const result = Conversation.restore({
+      me: ME,
+      seenSeqsByPeer: new Map(),
+      nextOutgoingSeq,
+      unreadCount,
+    })
+
+    expect(result.ok).toBe(false)
+  })
+
+  it('되살린 뒤에도 새 메시지를 받아들인다', () => {
+    const restored = Conversation.restore({
+      me: ME,
+      seenSeqsByPeer: new Map([[HER, [1]]]),
+      nextOutgoingSeq: 1,
+      unreadCount: 0,
+    })
+    if (!restored.ok) throw new Error('앞선 단계가 실패했다')
+
+    const accepted = restored.value.accept(makeReceived({ author: HER, seq: 2 }))
+
+    expect(accepted.accepted).toBe(true)
+    expect(accepted.conversation.missingSeqs(HER)).toEqual([])
   })
 })
 
