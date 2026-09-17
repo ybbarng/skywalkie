@@ -23,12 +23,18 @@ export class FakeMessageTransport implements MessageTransport {
   /** 앞으로 몇 번을 실패시킬까. -1 이면 계속 실패 */
   failCount = 0
 
+  /** 연결 자체를 실패시킨다. 길을 갈아탈 때 새 길이 안 열리는 상황을 만든다 */
+  failConnect = false
+
   constructor(readonly kind: LinkKind = 'wifi') {
     this.state = ConnectionState.connected(kind)
     this.linkQuality = LinkQuality.unknown(kind)
   }
 
   async connect(): Promise<Result<void, DomainError>> {
+    if (this.failConnect) {
+      return err(domainError('not-found', '연결하지 못했다', 'transport'))
+    }
     this.setState(ConnectionState.connected(this.kind))
     return ok(undefined)
   }

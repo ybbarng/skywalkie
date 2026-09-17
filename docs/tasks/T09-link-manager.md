@@ -1,6 +1,6 @@
 # T09 — 연결 상태와 자동 재연결
 
-**단계** 연결 · **상태** 대기 · **먼저** T05, T08
+**단계** 연결 · **상태** 완료 · **먼저** T05, T08
 
 ## 목표
 
@@ -66,7 +66,7 @@ new CompositeTransport([
 `LinkedTransportPair`를 만든다. 두 개의 가짜 연결을 서로 묶어 한쪽에 넣은 것이 다른 쪽으로 나오게 하는 도구다. **[09-testing.md](../09-testing.md) 5장의 핵심 도구이고 이 카드에서 만든다.**
 
 ```ts
-const [a, b] = LinkedTransportPair.create({
+const [a, b] = linkedTransportPair({
   latencyMs: 50,
   dropRate: 0.1,
   reorder: true,
@@ -83,6 +83,48 @@ const [a, b] = LinkedTransportPair.create({
 
 ## 끝난 걸 어떻게 아는가
 
-- [ ] `LinkedTransportPair`로 두 기기 대화 전 과정이 시험된다
-- [ ] 갈아탈 때 메시지 유실이 0건이다
-- [ ] 위층 코드에 `wifi`나 `ble`이라는 말이 나오지 않는다
+- [x] `linkedTransportPair` 로 두 기기 대화 전 과정이 시험된다
+- [x] 갈아탈 때 메시지 유실이 0건이다
+- [x] 위층 코드에 `wifi` 나 `ble` 이라는 말이 나오지 않는다
+
+## 하면서 알게 된 것
+
+### 통합 테스트가 진짜 버그를 잡았다
+
+**"양쪽이 동시에 보내도 각자의 순서가 유지된다"** 테스트가 실패했다.
+스무 통을 보냈는데 한 통만 도착했다.
+
+원인은 대화 상태를 다루는 방식이었다.
+
+```ts
+const next = await doSomething(this.conversation)
+this.conversation = next            // ← 여기
+```
+
+`Conversation` 은 불변 값이라 바꿀 때마다 새것이 나온다. 그런데 보내기와
+받기가 동시에 일어나면 **둘 다 같은 옛 값을 읽고** 각자 새 값을 만들어
+덮어쓴다. 나중에 끝난 쪽이 이긴다. 그러면
+
+- 받은 메시지가 대화에서 사라지거나
+- 내 순번이 되돌아가 상대가 중복으로 보고 메시지를 버린다
+
+이 앱은 **양쪽이 동시에 말하는 게 흔해서** 반드시 생기는 문제다.
+비행기에서 발견했다면 손쓸 방법이 없었다.
+
+`SerialQueue` 를 만들어 대화 상태를 건드리는 일을 한 줄에 세웠다.
+실제 화면 코드도 같은 것을 쓴다.
+
+### 갈아타는 순서를 상태 기계가 강제한다
+
+[T04](./T04-domain-connection.md) 에서 `switching → connected` 로 갈 때
+새 길이 반드시 있어야 하도록 만들어 두었는데, 여기서 그 값을 했다.
+순서를 어기는 코드를 쓰면 상태 전이가 실패해서 바로 드러난다.
+
+`CompositeTransport` 는 옮긴 뒤 **옛 길의 알림을 끊는다.** 안 그러면
+옛 길이 "나 끊겼어"라고 알릴 때 위층이 진짜로 끊긴 줄 안다. 우리가
+일부러 놓은 것인데도.
+
+### 이름을 함수로 바꿨다
+
+`LinkedTransportPair.create()` 처럼 static 메서드 하나만 있는 클래스는
+그냥 함수여야 한다. 검사 도구가 잡아줘서 `linkedTransportPair()` 로 바꿨다.

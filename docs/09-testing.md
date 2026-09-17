@@ -111,7 +111,7 @@ test/fakes/
 `LinkedTransportPair`가 핵심 도구다. 두 개의 가짜 연결을 서로 묶어서 한쪽에 넣은 것이 다른 쪽으로 나오게 한다. 지연, 유실, 순서 뒤바뀜을 일부러 만들 수도 있다.
 
 ```ts
-const [a, b] = LinkedTransportPair.create({
+const [a, b] = linkedTransportPair({
   latencyMs: 50,
   dropRate: 0.1,      // 10%를 일부러 잃어버린다
   reorder: true,

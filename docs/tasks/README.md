@@ -26,7 +26,7 @@
 | T06 | [저장소 — SQLite](./T06-persistence.md) | 핵심 | **완료** |
 | T07 | [통신 규약 — 봉투와 바이트 자르기](./T07-protocol.md) | 연결 | **완료** |
 | T08 | [Wi-Fi 연결 — 상대 찾기와 TCP](./T08-wifi-transport.md) | 연결 | 코드 완료 · 기기 확인 대기 |
-| T09 | [연결 상태와 자동 재연결](./T09-link-manager.md) | 연결 | 대기 |
+| T09 | [연결 상태와 자동 재연결](./T09-link-manager.md) | 연결 | **완료** |
 | T10 | [캐릭터 그리기](./T10-characters.md) | 화면 | 대기 |
 | T11 | [앱 아이콘](./T11-app-icon.md) | 화면 | 대기 |
 | T12 | [화면 — 첫 실행 안내](./T12-onboarding.md) | 화면 | 대기 |
