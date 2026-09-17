@@ -16,7 +16,7 @@
 
 ### 먼저 할 일
 
-지금 깔린 JDK가 11이다. React Native 0.87은 17이 필요하다.
+지금 깔린 JDK가 11이다. React Native 0.86은 17이 필요하다.
 
 ```bash
 brew install --cask temurin@17

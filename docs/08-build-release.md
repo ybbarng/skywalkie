@@ -10,12 +10,12 @@
 |---|---|---|
 | Node.js | 20 이상 | 지금 24.14.1이 깔려 있다 |
 | pnpm | 10 이상 | 지금 10.32.1 |
-| JDK | **17** | React Native 0.87이 요구한다 |
+| JDK | **17** | React Native 0.86이 요구한다 |
 | Xcode | 16 이상 | 지금 16.2 |
 | Android SDK | 35 이상 | 이미 설치됨 |
 | CocoaPods | 1.15 이상 | 아이폰 쪽 라이브러리 설치용 |
 
-> **먼저 할 일**: 지금 깔린 JDK가 11이다. React Native 0.87은 17이 필요하므로 안드로이드 빌드 전에 17을 설치해야 한다. `brew install --cask temurin@17` 뒤에 `JAVA_HOME`을 바꾼다.
+> **먼저 할 일**: 지금 깔린 JDK가 11이다. React Native 0.86은 17이 필요하므로 안드로이드 빌드 전에 17을 설치해야 한다. `brew install --cask temurin@17` 뒤에 `JAVA_HOME`을 바꾼다.
 
 ## 2. 처음 한 번 하는 일
 

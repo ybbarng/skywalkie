@@ -69,7 +69,7 @@ WebRTC를 쓸 때 보통 필요한 외부 서버는 두 가지다.
 
 ### 정한 것
 
-Expo SDK 57 / React Native 0.87 위에 TypeScript로 만든다.
+Expo SDK 57 / React Native 0.86 위에 TypeScript로 만든다.
 `expo prebuild`로 네이티브 프로젝트를 만들어 쓴다. **Expo Go 앱으로는 못 돌린다.**
 
 ### 왜
@@ -187,7 +187,9 @@ Jest 대신 Vitest를 쓰는 이유는 빠르고 설정이 단순해서다. Reac
 | 용도 | 라이브러리 | 버전 |
 |---|---|---|
 | 앱 뼈대 | expo | 57.x |
-| 앱 뼈대 | react-native | 0.87.x |
+| 앱 뼈대 | react-native | 0.86.x (SDK 57이 정한 값) |
+| 앱 뼈대 | react | 19.2.x |
+| 타입 | typescript | 6.0.x |
 | 화면 이동 | expo-router | SDK 동봉 |
 | 음성·영상 | react-native-webrtc | 124.x |
 | 블루투스 | react-native-ble-plx | 3.5.x |

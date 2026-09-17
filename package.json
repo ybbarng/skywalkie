@@ -1,0 +1,57 @@
+{
+  "name": "skywalkie",
+  "version": "0.1.0",
+  "private": true,
+  "description": "비행기에서 두 사람이 인터넷 없이 대화하는 앱",
+  "main": "expo-router/entry",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "expo start --dev-client",
+    "dev:android": "expo run:android",
+    "dev:ios": "expo run:ios",
+    "prebuild": "expo prebuild --clean",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "check:deps": "tsx scripts/check-deps.ts",
+    "verify": "pnpm lint && pnpm typecheck && pnpm check:deps && pnpm test"
+  },
+  "dependencies": {
+    "expo": "~57.0.21",
+    "expo-constants": "~57.0.18",
+    "expo-linking": "~57.0.10",
+    "expo-router": "~57.0.21",
+    "expo-splash-screen": "~57.0.9",
+    "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.4",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.2",
+    "react-native-svg": "15.15.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.0",
+    "@types/react": "~19.2.2",
+    "@vitest/coverage-v8": "^5.0.1",
+    "lefthook": "^2.1.14",
+    "tsx": "^4.23.13",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@biomejs/biome",
+      "lefthook"
+    ]
+  }
+}
