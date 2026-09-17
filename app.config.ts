@@ -57,7 +57,9 @@ const config: ExpoConfig = {
     ],
   },
 
-  plugins: ['expo-router', 'expo-splash-screen'],
+  // `expo install` 은 플러그인을 app.json 에 적으려 한다.
+  // 설정이 두 곳으로 흩어지지 않게 여기로 옮기고 app.json 은 지운다.
+  plugins: ['expo-router', 'expo-splash-screen', 'expo-sqlite'],
 
   experiments: {
     typedRoutes: true,

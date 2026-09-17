@@ -46,3 +46,6 @@ coverage/
 .vscode/
 !.vscode/extensions.json
 *.tsbuildinfo
+
+# expo install 이 만드는 파일. 설정은 app.config.ts 한 곳에서만 관리한다.
+app.json

@@ -19,7 +19,7 @@
 | | 카드 | 단계 | 상태 |
 |---|---|---|---|
 | T01 | [프로젝트 뼈대와 개발 도구](./T01-project-setup.md) | 기반 | **완료** |
-| T02 | [디자인 토큰과 밝기 모드](./T02-design-tokens.md) | 기반 | 대기 |
+| T02 | [디자인 토큰과 밝기 모드](./T02-design-tokens.md) | 기반 | **완료** |
 | T03 | [도메인 — 메시지와 대화](./T03-domain-message.md) | 핵심 | 대기 |
 | T04 | [도메인 — 연결과 상대](./T04-domain-connection.md) | 핵심 | 대기 |
 | T05 | [응용 — 약속과 메시지 절차](./T05-application-messaging.md) | 핵심 | 대기 |

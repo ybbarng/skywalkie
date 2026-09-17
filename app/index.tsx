@@ -1,41 +1,140 @@
 import Constants from 'expo-constants'
-import { StyleSheet, Text, useColorScheme, View } from 'react-native'
+import { useState } from 'react'
+import { ScrollView, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Button } from '@/presentation/components/Button'
+import { Card } from '@/presentation/components/Card'
+import { HelpTip } from '@/presentation/components/HelpTip'
+import { Icon } from '@/presentation/components/Icon'
+import { Text } from '@/presentation/components/Text'
+import { useTheme, useThemePreference } from '@/presentation/theme/ThemeProvider'
+import type { ThemePreference } from '@/presentation/theme/tokens'
 
 /**
- * 뼈대가 서 있는지 확인하는 화면. T12 에서 첫 실행 안내로 바뀐다.
+ * 토큰과 부품이 제대로 도는지 보는 화면. T12 에서 첫 실행 안내로 바뀐다.
  */
 export default function Index() {
-  const isDark = useColorScheme() === 'dark'
+  const theme = useTheme()
+  const { preference, setPreference } = useThemePreference()
+  const [nudged, setNudged] = useState(0)
   const version = Constants.expoConfig?.version ?? '0.0.0'
 
+  const modes: Array<[ThemePreference, string]> = [
+    ['system', '기기 설정'],
+    ['light', '밝게'],
+    ['dark', '어둡게'],
+  ]
+
   return (
-    <SafeAreaView style={[styles.screen, isDark ? styles.dark : styles.light]}>
-      <View style={styles.center}>
-        <Text style={[styles.title, isDark ? styles.textDark : styles.textLight]}>
-          Skywalkie
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      <ScrollView
+        contentContainerStyle={{ padding: theme.spacing.xl, gap: theme.spacing.xl }}
+      >
+        <View style={{ gap: theme.spacing.xs }}>
+          <Text variant="display">Skywalkie</Text>
+          <Text color="textMuted">비행기에서 둘만의 통신망</Text>
+        </View>
+
+        <Card>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: theme.spacing.md,
+            }}
+          >
+            <Text variant="heading">밝기 모드</Text>
+            <HelpTip topic="themeMode" />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+            {modes.map(([value, label]) => (
+              <View key={value} style={{ flex: 1 }}>
+                <Button
+                  label={label}
+                  tone={preference === value ? 'primary' : 'ghost'}
+                  onPress={() => setPreference(value)}
+                />
+              </View>
+            ))}
+          </View>
+        </Card>
+
+        <Card>
+          <Text variant="heading" style={{ marginBottom: theme.spacing.md }}>
+            말풍선 색
+          </Text>
+
+          <View style={{ gap: theme.spacing.sm }}>
+            <View
+              style={{
+                alignSelf: 'flex-start',
+                backgroundColor: theme.colors.peer,
+                borderRadius: theme.radius.xl,
+                borderBottomLeftRadius: theme.radius.sm,
+                paddingHorizontal: theme.spacing.lg,
+                paddingVertical: theme.spacing.md,
+              }}
+            >
+              <Text style={{ color: theme.colors.peerText }}>어디쯤이야?</Text>
+            </View>
+
+            <View
+              style={{
+                alignSelf: 'flex-end',
+                backgroundColor: theme.colors.me,
+                borderRadius: theme.radius.xl,
+                borderBottomRightRadius: theme.radius.sm,
+                paddingHorizontal: theme.spacing.lg,
+                paddingVertical: theme.spacing.md,
+              }}
+            >
+              <Text style={{ color: theme.colors.meText }}>34열 창가</Text>
+            </View>
+          </View>
+        </Card>
+
+        <Card>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: theme.spacing.md,
+            }}
+          >
+            <Text variant="heading">부품</Text>
+            <HelpTip topic="nudge" />
+          </View>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: theme.spacing.lg,
+              marginBottom: theme.spacing.lg,
+            }}
+          >
+            <Icon name="wifi" color="success" size={24} />
+            <Icon name="bluetooth" color="warning" size={24} />
+            <Icon name="mic" size={24} />
+            <Icon name="checkDouble" color="peer" size={24} />
+            <Icon name="plane" color="me" size={24} />
+          </View>
+
+          <Button
+            label={nudged === 0 ? '콕 찌르기' : `${nudged}번 찔렀어요`}
+            tone="neutral"
+            fullWidth
+            icon={<Icon name="chat" size={18} />}
+            onPress={() => setNudged(n => n + 1)}
+          />
+        </Card>
+
+        <Text variant="caption" color="textFaint" align="center">
+          v{version} · T02 디자인 토큰
         </Text>
-        <Text style={[styles.subtitle, isDark ? styles.mutedDark : styles.mutedLight]}>
-          비행기에서 둘만의 통신망
-        </Text>
-        <Text style={[styles.version, isDark ? styles.mutedDark : styles.mutedLight]}>
-          v{version} · 뼈대 세우는 중
-        </Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  dark: { backgroundColor: '#0B1020' },
-  light: { backgroundColor: '#F6F8FC' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  title: { fontSize: 34, fontWeight: '700' },
-  subtitle: { fontSize: 16 },
-  version: { fontSize: 13, marginTop: 24 },
-  textDark: { color: '#E8ECF5' },
-  textLight: { color: '#121826' },
-  mutedDark: { color: '#8B95AD' },
-  mutedLight: { color: '#5D6A85' },
-})

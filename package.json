@@ -20,7 +20,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "check:deps": "tsx scripts/check-deps.ts",
-    "verify": "pnpm lint && pnpm typecheck && pnpm check:deps && pnpm test"
+    "check:tokens": "tsx scripts/check-tokens.ts",
+    "verify": "pnpm lint && pnpm typecheck && pnpm check:deps && pnpm check:tokens && pnpm test"
   },
   "dependencies": {
     "expo": "~57.0.21",
@@ -28,6 +29,7 @@
     "expo-linking": "~57.0.10",
     "expo-router": "~57.0.21",
     "expo-splash-screen": "~57.0.9",
+    "expo-sqlite": "~57.0.3",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "react": "19.2.3",
