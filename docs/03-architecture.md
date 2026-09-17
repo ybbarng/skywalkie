@@ -79,6 +79,7 @@ src/
 │
 ├── application/                할 일과 약속
 │   ├── ports/                      바깥에 요구하는 약속들
+│   │   ├── Envelope.ts                 "두 기기가 주고받는 말의 생김새"
 │   │   ├── MessageTransport.ts         "메시지를 나르는 무언가"
 │   │   ├── ConversationRepository.ts    "대화를 보관하는 무언가"
 │   │   ├── PeerDiscovery.ts             "상대를 찾는 무언가"
@@ -242,7 +243,16 @@ export function createContainer(): Container {
 
 연결 방식이 달라도 **주고받는 내용의 형식은 같다.** 그래야 Wi-Fi에서 블루투스로 갈아타도 코드가 그대로다.
 
-형식은 `zod`로 정의하고 받을 때마다 검사한다. 상대가 보낸 것을 믿지 않는다 — 버전이 다른 앱끼리 붙을 수 있기 때문이다.
+이 형식을 어느 층에 둘지가 한 번 문제가 됐다. 결론은 이렇게 나눴다.
+
+| 무엇 | 어디 |
+|---|---|
+| **봉투의 생김새** — 무엇을 주고받는가 | `application/ports/Envelope.ts` |
+| **바이트로 바꾸고 형식을 검사하는 일** | `infrastructure/transport/protocol/` |
+
+"무엇을 주고받는가"는 응용 계층의 관심사이고, "어떻게 바이트로 바꾸는가"가 바깥의 관심사다. 이렇게 나누지 않으면 `application`이 `infrastructure`를 참조하게 되어 의존 방향이 뒤집힌다.
+
+형식 검사는 `zod`로 하고 받을 때마다 확인한다. 상대가 보낸 것을 믿지 않는다 — 버전이 다른 앱끼리 붙을 수 있기 때문이다. `zod`는 바깥 도구라 `infrastructure`에서만 쓴다.
 
 자세한 규약은 [04-transport-spec.md](./04-transport-spec.md)에 있다.
 
