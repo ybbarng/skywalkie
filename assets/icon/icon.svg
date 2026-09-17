@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    Skywalkie 아이콘.
+
+    종이비행기와 소리의 파동을 합쳤다. 밤하늘 위에 기내 조명 색으로 그린다.
+    색은 디자인 토큰의 bg 와 me 를 그대로 쓴다.
+
+    비행기는 기울이지 않는다. 기울이면 커서처럼 보인다.
+    (docs/07-design-system.md 7장)
+  -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1A2138"/>
+      <stop offset="100%" stop-color="#0B1020"/>
+    </linearGradient>
+    <linearGradient id="wingLeft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFC08C"/>
+      <stop offset="100%" stop-color="#FF9D5C"/>
+    </linearGradient>
+    <linearGradient id="wingRight" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F08234"/>
+      <stop offset="100%" stop-color="#D4661F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+
+  <!-- 창밖의 별 몇 개 -->
+  <circle cx="196" cy="212" r="7" fill="#5CC8FF" opacity="0.5"/>
+  <circle cx="838" cy="264" r="5" fill="#5CC8FF" opacity="0.36"/>
+  <circle cx="812" cy="806" r="6" fill="#5CC8FF" opacity="0.3"/>
+  <circle cx="236" cy="836" r="4" fill="#5CC8FF" opacity="0.28"/>
+
+  <!-- 소리의 파동. 비행기에서 좌우로 퍼진다 -->
+  <g fill="none" stroke="#5CC8FF" stroke-linecap="round">
+    <path d="M296 424a196 196 0 0 0 0 216" stroke-width="24" opacity="0.52"/>
+    <path d="M214 366a300 300 0 0 0 0 332" stroke-width="20" opacity="0.26"/>
+    <path d="M728 424a196 196 0 0 1 0 216" stroke-width="24" opacity="0.52"/>
+    <path d="M810 366a300 300 0 0 1 0 332" stroke-width="20" opacity="0.26"/>
+  </g>
+
+  <!-- 종이비행기. 위를 향한다 -->
+  <g>
+    <!-- 왼쪽 날개 (밝은 면) -->
+    <path d="M512 268 L512 634 L344 716 Z" fill="url(#wingLeft)"/>
+    <!-- 오른쪽 날개 (그늘진 면) -->
+    <path d="M512 268 L680 716 L512 634 Z" fill="url(#wingRight)"/>
+    <!-- 접힌 선 -->
+    <path d="M512 268 L512 634" stroke="#0B1020" stroke-width="7" opacity="0.28"/>
+  </g>
+</svg>

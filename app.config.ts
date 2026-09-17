@@ -13,7 +13,9 @@ const config: ExpoConfig = {
   orientation: 'default',
   userInterfaceStyle: 'automatic',
 
-  // 아이콘은 T11 에서 SVG 원본을 만들고 스크립트로 뽑아 여기 연결한다.
+  // 아이콘은 assets/icon/*.svg 가 원본이고 `pnpm icons:generate` 가 뽑는다.
+  // generated 폴더는 저장소에 넣지 않는다. (docs/07-design-system.md 7장)
+  icon: './assets/icon/generated/icon.png',
   backgroundColor: '#0B1020',
 
   ios: {
@@ -37,6 +39,11 @@ const config: ExpoConfig = {
 
   android: {
     package: 'com.ybbarng.skywalkie',
+    adaptiveIcon: {
+      foregroundImage: './assets/icon/generated/icon-foreground.png',
+      backgroundImage: './assets/icon/generated/icon-background.png',
+      monochromeImage: './assets/icon/generated/icon-monochrome.png',
+    },
     permissions: [
       'android.permission.INTERNET',
       'android.permission.ACCESS_NETWORK_STATE',
@@ -59,7 +66,20 @@ const config: ExpoConfig = {
 
   // `expo install` 은 플러그인을 app.json 에 적으려 한다.
   // 설정이 두 곳으로 흩어지지 않게 여기로 옮기고 app.json 은 지운다.
-  plugins: ['expo-router', 'expo-splash-screen', 'expo-sqlite'],
+  plugins: [
+    'expo-router',
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/icon/generated/splash.png',
+        imageWidth: 180,
+        backgroundColor: '#0B1020',
+        // 밝은 화면에서도 같은 그림을 쓰되 바탕만 바꾼다
+        dark: { backgroundColor: '#0B1020' },
+      },
+    ],
+    'expo-sqlite',
+  ],
 
   experiments: {
     typedRoutes: true,

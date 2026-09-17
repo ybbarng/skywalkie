@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!ios", "!android", "!.expo", "!dist", "!coverage"]
+    "includes": ["**", "!ios", "!android", "!.expo", "!dist", "!coverage", "!assets/icon"]
   },
   "formatter": {
     "enabled": true,

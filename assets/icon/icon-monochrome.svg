@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    안드로이드 13부터 테마 색에 맞춰 칠하는 아이콘.
+    모양만 있으면 되고 색은 시스템이 정한다.
+  -->
+  <path d="M512 352 L630 668 L512 610 L394 668 Z" fill="#000000"/>
+  <g fill="none" stroke="#000000" stroke-linecap="round">
+    <path d="M370 456a140 140 0 0 0 0 152" stroke-width="20"/>
+    <path d="M654 456a140 140 0 0 1 0 152" stroke-width="20"/>
+  </g>
+</svg>

@@ -28,7 +28,7 @@
 | T08 | [Wi-Fi 연결 — 상대 찾기와 TCP](./T08-wifi-transport.md) | 연결 | 코드 완료 · 기기 확인 대기 |
 | T09 | [연결 상태와 자동 재연결](./T09-link-manager.md) | 연결 | **완료** |
 | T10 | [캐릭터 그리기](./T10-characters.md) | 화면 | 코드 완료 · 눈 확인 대기 |
-| T11 | [앱 아이콘](./T11-app-icon.md) | 화면 | 대기 |
+| T11 | [앱 아이콘](./T11-app-icon.md) | 화면 | 코드 완료 · 눈 확인 대기 |
 | T12 | [화면 — 첫 실행 안내](./T12-onboarding.md) | 화면 | 대기 |
 | T13 | [화면 — 대화](./T13-chat-screen.md) | 화면 | 대기 |
 | T14 | [화면 — 연결 상태와 설정](./T14-status-settings.md) | 화면 | 대기 |
