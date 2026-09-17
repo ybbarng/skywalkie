@@ -97,13 +97,28 @@ pre-push:    전체 검사 (verify)
 
 ### pnpm 이 새 패키지 설치를 막았다
 
-전역 설정(`~/.npmrc`)에 `min-release-age=7`이 걸려 있었다. 배포된 지 7일이 안 된
-패키지를 막아 공급망 공격을 줄이는 좋은 규칙이다. 다만 Expo SDK 는 수십 개
-패키지가 함께 배포되고 이름 규칙도 제각각이라(`expo-*`, `@expo/*`,
-`babel-preset-expo`, `metro-*`) 일부만 예외로 두면 버전이 어긋난다.
+`minimumReleaseAge` 때문이다. **배포된 지 7일이 안 된 버전은 설치하지 않는**
+장치이고, npm 에 악성 버전이 올라가는 사고는 대개 며칠 안에 발견되어 내려가므로
+기다렸다 설치하는 것만으로 대부분을 피한다.
 
-이 프로젝트의 `.npmrc` 에서만 규칙을 끄고, 대신 `pnpm-lock.yaml` 을 저장소에 넣어
-버전을 고정했다. 전역 설정은 건드리지 않아 다른 프로젝트는 계속 보호받는다.
+처음에는 이 프로젝트의 `.npmrc` 에서 통째로 껐다가(`minimum-release-age=0`)
+되돌렸다. 확인해 보니 **잠금 파일에 이미 있는 버전을 설치할 때는 이 검사가
+걸리지 않는다.** 걸리는 건 의존성을 건드릴 때(add / remove / 버전 올리기)뿐이다.
+평소에 보호를 받고 그때만 푸는 편이 낫다.
+
+```
+pnpm install                  그냥 된다
+pnpm deps:add <패키지>         새로 넣을 때만 푼다
+pnpm deps:expo <패키지>        Expo SDK 버전에 맞춰 넣을 때
+```
+
+알아둘 것 세 가지.
+
+- **10080분(7일)은 pnpm 10.32 의 기본값이다.** 누가 설정한 게 아니다
+- `~/.npmrc` 의 `min-release-age=7` 은 pnpm 이 읽지 않는 키라 아무 효과가 없다.
+  실제로 동작하는 이름은 `minimum-release-age`(`minimumReleaseAge`)다
+- `expo install` 은 플래그를 pnpm 에 넘기지 못해서 환경변수로 푼다
+  (`npm_config_minimum_release_age=0`)
 
 ### 설정에서 걸러낸 것들
 
