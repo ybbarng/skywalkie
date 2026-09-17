@@ -27,9 +27,14 @@ const allowedLayers: Record<Layer, readonly Layer[]> = {
   domain: [],
   application: ['domain'],
   infrastructure: ['domain', 'application'],
-  // 화면은 infrastructure 를 직접 참조하지 않는다.
-  // 어떤 구현을 쓸지는 composition 이 정한다.
-  presentation: ['domain', 'application'],
+  // 화면은 infrastructure 를 **직접** 참조하지 않는다. 어떤 구현을 쓸지는
+  // composition 이 정하고, 화면은 거기서 받아 쓴다.
+  //
+  // composition 을 허용하는 이유: 화면도 결국 저장소와 연결이 필요하다.
+  // 그걸 어디선가는 받아야 하는데, 조립하는 곳을 거치면 "무엇이
+  // 끼워졌는지"를 한곳에서만 알게 된다. 대신 composition 에는 조립만
+  // 있고 판단이 없어야 한다.
+  presentation: ['domain', 'application', 'composition'],
   composition: ['domain', 'application', 'infrastructure', 'presentation'],
 }
 
