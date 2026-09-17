@@ -1,0 +1,48 @@
+# 의존성
+node_modules/
+.pnpm-store/
+
+# Expo가 만드는 네이티브 프로젝트
+# app.config.ts 에서 다시 만들 수 있으므로 저장소에 넣지 않는다.
+# 손으로 고치면 다음 prebuild 에서 날아간다. (docs/08-build-release.md 참고)
+ios/
+android/
+.expo/
+expo-env.d.ts
+dist/
+web-build/
+
+# 서명 열쇠 — 절대 올리지 않는다
+*.keystore
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+*.cer
+
+# 환경 변수
+.env
+.env.local
+.env.*.local
+
+# 만들어지는 아이콘 (assets/icon/*.svg 에서 다시 만든다)
+assets/icon/generated/
+
+# 빌드 결과물
+*.apk
+*.aab
+*.ipa
+build/
+.gradle/
+
+# 테스트
+coverage/
+.vitest/
+
+# 도구
+.DS_Store
+*.log
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.tsbuildinfo
