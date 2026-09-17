@@ -24,7 +24,7 @@
 | T04 | [도메인 — 연결과 상대](./T04-domain-connection.md) | 핵심 | **완료** |
 | T05 | [응용 — 약속과 메시지 절차](./T05-application-messaging.md) | 핵심 | **완료** |
 | T06 | [저장소 — SQLite](./T06-persistence.md) | 핵심 | **완료** |
-| T07 | [통신 규약 — 봉투와 바이트 자르기](./T07-protocol.md) | 연결 | 대기 |
+| T07 | [통신 규약 — 봉투와 바이트 자르기](./T07-protocol.md) | 연결 | **완료** |
 | T08 | [Wi-Fi 연결 — 상대 찾기와 TCP](./T08-wifi-transport.md) | 연결 | 대기 |
 | T09 | [연결 상태와 자동 재연결](./T09-link-manager.md) | 연결 | 대기 |
 | T10 | [캐릭터 그리기](./T10-characters.md) | 화면 | 대기 |
