@@ -35,7 +35,7 @@ export default function Index() {
   }
 
   return preferences.onboardingDone ? (
-    <Redirect href="/chat" />
+    <Redirect href="/(tabs)/chat" />
   ) : (
     <Redirect href="/onboarding/welcome" />
   )
