@@ -30,6 +30,7 @@
     "expo": "~57.0.21",
     "expo-constants": "~57.0.18",
     "expo-linking": "~57.0.10",
+    "expo-network": "~57.0.2",
     "expo-router": "~57.0.21",
     "expo-splash-screen": "~57.0.9",
     "expo-sqlite": "~57.0.3",
@@ -42,6 +43,8 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.2",
     "react-native-svg": "15.15.4",
+    "react-native-tcp-socket": "^6.4.3",
+    "react-native-udp": "^4.1.7",
     "zod": "^4.6.5"
   },
   "devDependencies": {
