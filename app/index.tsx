@@ -2,6 +2,13 @@ import Constants from 'expo-constants'
 import { useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import {
+  type CharacterId,
+  type Expression,
+  expressions,
+  selectableCharacters,
+} from '@/domain/peer/Character'
+import { Character } from '@/presentation/characters/Character'
 import { Button } from '@/presentation/components/Button'
 import { Card } from '@/presentation/components/Card'
 import { HelpTip } from '@/presentation/components/HelpTip'
@@ -17,6 +24,8 @@ export default function Index() {
   const theme = useTheme()
   const { preference, setPreference } = useThemePreference()
   const [nudged, setNudged] = useState(0)
+  const [character, setCharacter] = useState<CharacterId>('aria')
+  const [expression, setExpression] = useState<Expression>('speaking')
   const version = Constants.expoConfig?.version ?? '0.0.0'
 
   const modes: Array<[ThemePreference, string]> = [
@@ -104,6 +113,63 @@ export default function Index() {
               marginBottom: theme.spacing.md,
             }}
           >
+            <Text variant="heading">캐릭터</Text>
+            <HelpTip topic="character" />
+          </View>
+
+          <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
+            <Character id={character} expression={expression} level={0.6} size={150} />
+            <Text variant="caption" color="textMuted">
+              {character} · {expression}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: theme.spacing.sm,
+              marginTop: theme.spacing.md,
+            }}
+          >
+            {selectableCharacters().map(id => (
+              <Button
+                key={id}
+                label={id}
+                tone={character === id ? 'primary' : 'ghost'}
+                onPress={() => setCharacter(id)}
+              />
+            ))}
+          </View>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: theme.spacing.sm,
+              marginTop: theme.spacing.sm,
+            }}
+          >
+            {expressions.map(value => (
+              <Button
+                key={value}
+                label={value}
+                tone={expression === value ? 'neutral' : 'ghost'}
+                onPress={() => setExpression(value)}
+              />
+            ))}
+          </View>
+        </Card>
+
+        <Card>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: theme.spacing.md,
+            }}
+          >
             <Text variant="heading">부품</Text>
             <HelpTip topic="nudge" />
           </View>
@@ -132,7 +198,7 @@ export default function Index() {
         </Card>
 
         <Text variant="caption" color="textFaint" align="center">
-          v{version} · T02 디자인 토큰
+          v{version} · T10 캐릭터
         </Text>
       </ScrollView>
     </SafeAreaView>
