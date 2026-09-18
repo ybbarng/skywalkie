@@ -1,0 +1,17 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.ybbarng.skywalkie'
+version = '1.0.0'
+
+android {
+  namespace 'com.ybbarng.skywalkie.bleperipheral'
+
+  // expo-module-gradle-plugin 이 이 둘을 요구한다. 없으면 설정 단계에서 멎는다.
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
