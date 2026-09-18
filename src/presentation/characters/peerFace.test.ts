@@ -30,6 +30,30 @@ describe('상대를 모를 때', () => {
   })
 })
 
+describe('내가 붙여둔 별명이 있으면', () => {
+  it('이어지기 전에는 그 이름으로 부른다', () => {
+    // **누구를 기다리는지는 안다.** 모르는 건 그 사람이 뭘 골랐는지다.
+    expect(peerName(null, '여자친구')).toBe('여자친구')
+    expect(peerLabel(null, '여자친구')).toBe('여자친구')
+  })
+
+  it('이어지고 나면 상대가 고른 이름이 앞선다', () => {
+    // 본인이 그렇게 불리고 싶어 적은 것이다.
+    const her = { displayName: '지민', character: 'mira' } as const
+    expect(peerName(her, '여자친구')).toBe('지민')
+  })
+
+  it('별명이 비어 있으면 없는 것으로 본다', () => {
+    expect(peerName(null, '')).toBeNull()
+    expect(peerLabel(null, '')).toBe('상대')
+  })
+
+  it('캐릭터까지 알려주지는 못한다', () => {
+    // 별명을 적어뒀다고 상대가 뭘 골랐는지 알게 되는 건 아니다.
+    expect(peerFace(null)).toBeNull()
+  })
+})
+
 describe('상대를 알고 나면', () => {
   const her = { displayName: '지민', character: 'mira' } as const
 

@@ -175,7 +175,7 @@ export default function Chat() {
   useMessageNotifications({
     enabled: ready,
     me,
-    peerName: peerLabel(peer),
+    peerName: peerLabel(peer, profile?.peerNickname),
     messages,
   })
 
@@ -261,7 +261,7 @@ export default function Chat() {
         mine={battery.level}
         charging={battery.charging}
         peer={peerBattery}
-        peerName={peerLabel(peer)}
+        peerName={peerLabel(peer, profile?.peerNickname)}
         role={profile.role}
         callActive={call.state.isLive()}
       />
@@ -270,7 +270,7 @@ export default function Chat() {
         peerCharacter={peerFace(peer)}
         typing={peerTyping}
         connected={connected}
-        name={peerLabel(peer)}
+        name={peerLabel(peer, profile?.peerNickname)}
         canCall={call.available && connected}
         onCall={() => void call.call('voice')}
         onVideoCall={() => void call.call('video')}
@@ -307,7 +307,7 @@ export default function Chat() {
                   everConnected,
                 })}
                 role={profile.role}
-                peerName={peerName(peer)}
+                peerName={peerName(peer, profile?.peerNickname)}
                 peerCharacter={peerFace(peer)}
                 showHint={searchingTooLong}
               />
@@ -341,7 +341,7 @@ export default function Chat() {
 
       <CallOverlay
         state={call.state}
-        peerName={peerLabel(peer)}
+        peerName={peerLabel(peer, profile?.peerNickname)}
         peerCharacter={peerFace(peer)}
         myCharacter={profile.character}
         localUrl={call.localUrl}

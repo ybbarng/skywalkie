@@ -32,7 +32,7 @@ export default function Connect() {
     <StepLayout
       step={4}
       totalSteps={4}
-      title={role === 'host' ? '내가 이어줄게요' : '상대에게 들어갈게요'}
+      title={role === 'host' ? '내가 핫스팟을 열게요' : '상대에게 들어갈게요'}
       description={`${roleReason[role]}.`}
       onPrimary={() => {
         void (async () => {

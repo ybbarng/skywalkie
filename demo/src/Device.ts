@@ -39,6 +39,8 @@ export interface DeviceProfile {
   readonly displayName: string
   readonly character: CharacterId
   readonly pairingCode: string
+  /** 이 폰의 주인이 상대를 뭐라고 부르는가. 첫 실행 안내에서 적는다 */
+  readonly peerNickname: string
 }
 
 export class Device {

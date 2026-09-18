@@ -46,32 +46,51 @@ export function Character({ id, expression, level = 0, size = 160 }: CharacterPr
 }
 
 /**
- * 아직 누군지 모를 때.
+ * 아직 상대가 뭘 골랐는지 모를 때.
  *
- * 인사(`hello`)를 주고받아야 상대가 고른 캐릭터를 안다. 그전에는
- * 얼굴 없는 그림자로 둔다. **자리는 지키되 누구인 척은 하지 않는다.**
+ * **누구인지는 안다.** 옆자리에 앉은 사람이고 이름도 내가 붙여뒀다.
+ * 모르는 건 그 사람이 어떤 캐릭터를 골랐는지뿐이다. 그건 인사(`hello`)를
+ * 주고받아야 알 수 있는데, 이 화면은 바로 그 전에 뜬다.
+ *
+ * 그래서 물음표를 그리지 않는다. **"누구세요?" 가 아니라 "아직 안
+ * 왔어요" 다.** 첫 실행에서 반드시 거치는 화면이라 물음표를 띄우면
+ * 그게 이 앱의 첫인상이 된다.
+ *
+ * 자는 표정으로 두면 찾았을 때 또렷해지는 흐름과도 이어진다.
  */
 function UnknownPeer({ size }: { size: number }) {
   const theme = useTheme()
   const palette = grayPalette(theme.mode)
 
   return (
-    <View accessibilityLabel="아직 누구인지 모름">
+    <View accessibilityLabel="상대가 아직 들어오지 않음">
       <Svg width={size} height={size} viewBox="0 0 120 120">
         {/* 어깨와 머리. 캐릭터와 같은 자리에 둬야 바뀔 때 안 흔들린다 */}
         <Path d="M22 120c0-16 17-27 38-27s38 11 38 27z" fill={palette.clothing} />
         <Rect x={52} y={78} width={16} height={16} fill={palette.skinShade} />
         <Ellipse cx={60} cy={56} rx={30} ry={33} fill={palette.skin} />
 
-        {/* 물음표. 얼굴 대신이다 */}
+        {/* 머리 자리. 어떤 머리인지는 모르니 얼개만 둔다 */}
         <Path
-          d="M50 47a10 10 0 1 1 10 10v7"
+          d="M30 54c0-19 13-30 30-30s30 11 30 30c-3-9-9-13-14-14-7 4-25 4-32 0-5 1-11 5-14 14z"
+          fill={palette.hair}
+        />
+
+        {/* 감은 눈. 아직 안 왔다는 뜻이다 */}
+        <Path
+          d="M44 55q5 4 9 0M67 55q5 4 9 0"
           stroke={palette.line}
-          strokeWidth={5}
+          strokeWidth={2.4}
           strokeLinecap="round"
           fill="none"
         />
-        <Circle cx={60} cy={73} r={3.2} fill={palette.line} />
+        <Path
+          d="M53 70q7 3 14 0"
+          stroke={palette.mouth}
+          strokeWidth={2.2}
+          strokeLinecap="round"
+          fill="none"
+        />
       </Svg>
     </View>
   )

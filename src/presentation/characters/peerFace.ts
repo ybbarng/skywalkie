@@ -25,14 +25,31 @@ export function peerFace(peer: KnownPeer | null | undefined): CharacterId | null
 }
 
 /**
- * 모르면 `null`.
+ * 상대를 뭐라고 부를까.
  *
- * 문구를 짓는 쪽(`copy/connecting.ts`)에 그대로 넘긴다. 거기서
+ * 두 가지가 있다.
+ *
+ *   · **상대가 고른 이름** — 인사(`hello`)를 주고받아야 안다
+ *   · **내가 부르는 별명** — 첫 실행 안내에서 내가 적어둔다. "여자친구"
+ *
+ * 이어지기 전에는 별명을 쓴다. **누구를 기다리는지는 알고 있다.**
+ * 모르는 건 그 사람이 뭘 골랐는지지 누구인지가 아니다.
+ *
+ * 이어지고 나면 상대가 고른 이름이 앞선다. 본인이 그렇게 불리고 싶어
+ * 적은 것이기 때문이다.
+ *
+ * 둘 다 없으면 `null`. 문구를 짓는 쪽(`copy/connecting.ts`)이 그때
  * "상대가" 처럼 조사까지 맞춰 쓴다.
  */
-export function peerName(peer: KnownPeer | null | undefined): string | null {
-  const name = peer?.displayName ?? ''
-  return name.length > 0 ? name : null
+export function peerName(
+  peer: KnownPeer | null | undefined,
+  nickname?: string | null,
+): string | null {
+  const chosen = peer?.displayName ?? ''
+  if (chosen.length > 0) return chosen
+
+  const called = nickname ?? ''
+  return called.length > 0 ? called : null
 }
 
 /**
@@ -41,6 +58,9 @@ export function peerName(peer: KnownPeer | null | undefined): string | null {
  * 이름 자리를 비워두면 줄이 흔들린다. 무엇이 올 자리인지는 알려주되
  * 없는 이름을 지어내지 않는다.
  */
-export function peerLabel(peer: KnownPeer | null | undefined): string {
-  return peerName(peer) ?? '상대'
+export function peerLabel(
+  peer: KnownPeer | null | undefined,
+  nickname?: string | null,
+): string {
+  return peerName(peer, nickname) ?? '상대'
 }

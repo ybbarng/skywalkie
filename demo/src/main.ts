@@ -33,6 +33,7 @@ const android = new Device(
     displayName: '나',
     character: 'orion',
     pairingCode: '482913',
+    peerNickname: '여자친구',
   },
   net,
   ulidGenerator,
@@ -45,6 +46,7 @@ const iphone = new Device(
     displayName: '지민',
     character: 'mira',
     pairingCode: '482913',
+    peerNickname: '남자친구',
   },
   net,
   ulidGenerator,
@@ -182,11 +184,14 @@ function renderConnecting(device: Device): string {
   /**
    * **상대를 넘겨다보지 않는다.**
    *
-   * 인사(`hello`)를 주고받기 전에는 상대가 누구인지 알 길이 없다.
-   * 데모는 두 기기를 한 화면에 들고 있어서 몰래 볼 수 있지만, 그러면
-   * 실제 첫 연결과 다른 것을 보여주게 된다. 앱과 똑같이 모른 채로 둔다.
+   * 인사(`hello`)를 주고받기 전에는 상대가 무엇을 골랐는지 알 길이
+   * 없다. 데모는 두 기기를 한 화면에 들고 있어서 몰래 볼 수 있지만,
+   * 그러면 실제 첫 연결과 다른 것을 보여주게 된다.
+   *
+   * 다만 **누구를 기다리는지는 안다.** 첫 실행 안내에서 적어둔 별명을
+   * 쓴다. 앱의 `peerName(peer, profile.peerNickname)` 과 같다.
    */
-  const peerName = device.peerName
+  const peerName = device.peerName ?? device.profile.peerNickname
 
   // **진짜 문구를 쓴다.** src/presentation/copy/connecting.ts
   const copy = copyFor(phaseOf(device), peerName, {
@@ -207,7 +212,7 @@ function renderConnecting(device: Device): string {
 function renderHead(device: Device): string {
   const live = device.connection.isUsable()
   const expr: Expression = !live ? 'disconnected' : device.peerTyping ? 'typing' : 'idle'
-  const peerName = device.peerName ?? '상대'
+  const peerName = device.peerName ?? device.profile.peerNickname
 
   return '<div class="peerhead">'
     + character(device.peerCharacter, expr, 38)
@@ -307,7 +312,7 @@ function renderPanel(): string {
     붙는 것은 앱이 알아서 하므로 누를 것이 없다. 아래 두 줄은
     좁고 나쁜 길을 흉내 내는 손잡이다.
   */
-  return '<button data-act="auto">바로 이어주기</button>'
+  return '<button data-act="auto">바로 연결하기</button>'
     + '<span class="sep"></span>'
     + `<button class="${net.hotspotOn ? 'on' : ''}" data-act="hotspot">`
     + `${net.hotspotOn ? '핫스팟 끄기' : '핫스팟 켜기'}</button>`

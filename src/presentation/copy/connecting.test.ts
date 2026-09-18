@@ -52,7 +52,7 @@ describe('오래 걸릴 때 덧붙이는 도움말', () => {
     const hint = longHintFor('host', '지민', ours)
     const text = hint.lines.join('\n')
 
-    expect(text).toContain('지민님은')
+    expect(text).toContain('지민은')
     expect(text).not.toContain('{peer')
   })
 
@@ -103,21 +103,71 @@ describe('상대를 아직 모를 때', () => {
     }
   })
 
-  it('이름을 알면 "님" 을 붙이고 조사를 맞춘다', () => {
-    expect(copyFor('need-hotspot', '지민', ours).detail).toContain('지민님이')
-    expect(copyFor('found', '지민', ours).title).toBe('지민님을 찾았어요')
+  it('받침이 있는 이름에는 이 · 을 을 붙인다', () => {
+    expect(copyFor('waiting-for-peer', '지민', ours).detail).toContain('지민이')
+    expect(copyFor('found', '지민', ours).title).toBe('지민을 찾았어요')
   })
 
-  it('이름을 모르면 "님" 을 붙이지 않는다', () => {
-    // "상대님" 은 사람을 부르는 말이 아니다.
-    expect(copyFor('need-hotspot', null, ours).detail).toContain('상대가')
+  it('받침이 없는 이름에는 가 · 를 을 붙인다', () => {
+    expect(copyFor('waiting-for-peer', '여자친구', ours).detail).toContain('여자친구가')
+    expect(copyFor('found', '여자친구', ours).title).toBe('여자친구를 찾았어요')
+  })
+
+  it('부르는 말에 "님" 을 붙이지 않는다', () => {
+    // "여자친구님" 은 사람을 부르는 말이 아니다.
+    const text = [
+      copyFor('waiting-for-peer', '여자친구', ours).detail,
+      copyFor('found', '여자친구', ours).title,
+      copyFor('need-hotspot', '여자친구', ours).detail,
+    ].join('\n')
+
+    expect(text).not.toContain('님')
+  })
+
+  it('이름을 모르면 "상대" 라고 부른다', () => {
+    expect(copyFor('waiting-for-peer', null, ours).detail).toContain('상대가')
     expect(copyFor('found', null, ours).title).toBe('상대를 찾았어요')
-    expect(copyFor('need-hotspot', null, ours).detail).not.toContain('상대님')
   })
 
   it('빈 이름을 받아도 모르는 것으로 본다', () => {
-    // 인사는 받았는데 이름이 비었다. "님이" 만 떠 있으면 안 된다.
-    expect(copyFor('need-hotspot', '', ours).detail).toContain('상대가')
+    // 인사는 받았는데 이름이 비었다. 조사만 떠 있으면 안 된다.
+    expect(copyFor('waiting-for-peer', '', ours).detail).toContain('상대가')
+  })
+})
+
+/**
+ * 붙는 일은 앱이 한다.
+ *
+ * **사람이 누를 것은 핫스팟과 Wi-Fi 뿐이다.** 서로 찾아 붙는 건
+ * 켜져 있는 동안 앱이 알아서 계속 한다(`WifiLink`). 화면이 그걸
+ * 말해주지 않으면 사람은 어딘가 더 누를 데가 있나 찾게 된다.
+ */
+describe('더 할 일이 없을 때는', () => {
+  const ours = { ssid: 'our-hotspot', password: 'secret' }
+
+  it('기다리면 된다고 말한다', () => {
+    const copy = copyFor('waiting-for-peer', '지민', ours)
+    const text = `${copy.title}\n${copy.detail}`
+
+    expect(text).toContain('저절로')
+    expect(copy.action).toBeUndefined()
+  })
+
+  it('찾는 중에도 더 누를 것이 없다고 말한다', () => {
+    const copy = copyFor('looking', '지민', ours)
+
+    expect(copy.detail).toContain('더 누를 것은 없어요')
+    expect(copy.action).toBeUndefined()
+  })
+
+  it('할 일이 있는 단계에만 버튼을 둔다', () => {
+    // 눌러도 아무 일 없는 버튼을 두면 "앱이 고장났나" 싶어진다.
+    expect(copyFor('need-hotspot', '지민', ours).action).toBe('핫스팟 켜러 가기')
+    expect(copyFor('need-wifi', '지민', ours).action).toBe('Wi-Fi 고르러 가기')
+
+    for (const phase of ['looking', 'found', 'joining', 'recovering'] as const) {
+      expect(copyFor(phase, '지민', ours).action).toBeUndefined()
+    }
   })
 })
 

@@ -19,6 +19,17 @@ const profileSchema = z.object({
   pairingCode: z.string().length(6),
   /** 핫스팟을 연 쪽인가 붙는 쪽인가 */
   role: z.enum(['host', 'guest']),
+  /**
+   * 상대를 내가 뭐라고 부르는가. "여자친구" 같은 것.
+   *
+   * **상대가 고른 이름은 인사를 주고받아야 안다.** 그런데 연결 화면은
+   * 바로 그 전에 뜬다. 그때 "상대가 들어오기를 기다려요" 라고 하면
+   * 누구를 기다리는지 모르는 것처럼 들린다. 사실은 안다.
+   *
+   * **없어도 된다.** 안 적으면 "상대" 라고 쓴다. 예전에 저장해둔
+   * 프로필에는 이 값이 없으므로 `optional` 이어야 한다.
+   */
+  peerNickname: z.string().max(20).optional(),
 })
 
 const peerSchema = z.object({

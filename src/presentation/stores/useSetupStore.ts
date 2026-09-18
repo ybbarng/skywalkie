@@ -35,6 +35,8 @@ interface SetupState {
   ensureProfile(): Promise<void>
   chooseCharacter(character: CharacterId): Promise<void>
   setDisplayName(displayName: string): Promise<void>
+  /** 상대를 뭐라고 부를지. 비우면 "상대" 로 쓴다 */
+  setPeerNickname(nickname: string): Promise<void>
   chooseAudioMode(audioMode: Preferences['audioMode']): Promise<void>
   finishOnboarding(): Promise<void>
   restartOnboarding(): Promise<void>
@@ -98,6 +100,20 @@ export const useSetupStore = create<SetupState>((set, get) => ({
     await persistProfile(set, {
       ...current,
       displayName: displayName.trim().slice(0, 20),
+    })
+  },
+
+  async setPeerNickname(nickname) {
+    await get().ensureProfile()
+
+    const current = get().profile
+    if (current === null) return
+
+    const trimmed = nickname.trim().slice(0, 20)
+    await persistProfile(set, {
+      ...current,
+      // 비웠으면 아예 지운다. 빈 글자를 들고 있으면 판단이 늘어난다.
+      ...(trimmed.length > 0 ? { peerNickname: trimmed } : { peerNickname: undefined }),
     })
   },
 

@@ -146,10 +146,10 @@ function face(expr: Expression, p: Palette): string {
 }
 
 /**
- * 아직 누군지 모를 때.
+ * 아직 상대가 뭘 골랐는지 모를 때.
  *
- * 인사를 주고받아야 상대가 고른 캐릭터를 안다. 그전에 아무 얼굴이나
- * 그리면 거짓말이 된다. **자리는 지키되 누구인 척은 하지 않는다.**
+ * **누구인지는 안다.** 모르는 건 그 사람이 어떤 캐릭터를 골랐는지뿐이다.
+ * 그래서 물음표를 그리지 않는다. "누구세요?" 가 아니라 "아직 안 왔어요" 다.
  * (`src/presentation/characters/Character.tsx` 의 `UnknownPeer`)
  */
 export function unknownPeer(size: number): string {
@@ -159,8 +159,9 @@ export function unknownPeer(size: number): string {
     + `<path d="M22 120c0-16 17-27 38-27s38 11 38 27z" fill="${p.cloth}"/>`
     + `<rect x="52" y="78" width="16" height="16" fill="${p.shade}"/>`
     + `<ellipse cx="60" cy="56" rx="30" ry="33" fill="${p.skin}"/>`
-    + `<path d="M50 47a10 10 0 1 1 10 10v7" stroke="${p.line}" stroke-width="5" stroke-linecap="round" fill="none"/>`
-    + `<circle cx="60" cy="73" r="3.2" fill="${p.line}"/>`
+    + `<path d="M30 54c0-19 13-30 30-30s30 11 30 30c-3-9-9-13-14-14-7 4-25 4-32 0-5 1-11 5-14 14z" fill="${p.hair}"/>`
+    + `<path d="M44 55q5 4 9 0M67 55q5 4 9 0" stroke="${p.line}" stroke-width="2.4" stroke-linecap="round" fill="none"/>`
+    + `<path d="M53 70q7 3 14 0" stroke="${p.mouth}" stroke-width="2.2" stroke-linecap="round" fill="none"/>`
     + '</svg>'
 }
 

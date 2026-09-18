@@ -1,5 +1,6 @@
 import { type HomeHotspot, homeHotspot } from '@/composition/hotspot'
 import type { Profile } from '@/composition/services'
+import { asObject, asSubject, asTopic } from './josa'
 
 /**
  * 연결 화면에 쓰는 글.
@@ -50,34 +51,36 @@ const UNKNOWN_WIFI = '상대 폰 이름'
 /**
  * 상대를 부르는 말.
  *
- * **이름은 인사를 주고받아야 안다.** 한 번도 안 이어졌으면 모른다.
- * 그때 아무 이름이나 넣으면 "누구세요?" 가 된다.
+ * 이름은 두 군데서 온다.
  *
- * 조사까지 여기서 정해두는 이유는 받침이 다르기 때문이다. 이름을
- * 알면 "지민님이", 모르면 "상대가" 다. "상대이" 라고 쓸 수는 없다.
+ *   · 상대가 고른 이름 — 인사를 주고받아야 안다
+ *   · 내가 붙여둔 별명 — 첫 실행 안내에서 적는다. "여자친구"
+ *
+ * 둘 다 없으면 "상대" 라고 쓴다.
+ *
+ * **"님" 을 붙이지 않는다.** 이름에는 붙여도 되지만 "여자친구님" 은
+ * 어색하다. 대신 받침을 보고 조사를 고른다(`josa.ts`). 그래야
+ * "여자친구가" 와 "지민이" 가 둘 다 맞는다.
  */
 interface PeerWords {
-  /** 지민님 · 상대 */
+  /** 지민 · 여자친구 · 상대 */
   readonly name: string
-  /** 지민님이 · 상대가 */
+  /** 지민이 · 여자친구가 */
   readonly subject: string
-  /** 지민님은 · 상대는 */
+  /** 지민은 · 여자친구는 */
   readonly topic: string
-  /** 지민님을 · 상대를 */
+  /** 지민을 · 여자친구를 */
   readonly object: string
 }
 
 function wordsFor(peerName: string | null): PeerWords {
-  // 이름을 알면 "님" 이 붙어 늘 받침이 있다. 모르면 "상대" 라 늘 없다.
-  if (peerName === null || peerName.length === 0) {
-    return { name: '상대', subject: '상대가', topic: '상대는', object: '상대를' }
-  }
+  const name = peerName === null || peerName.length === 0 ? '상대' : peerName
 
   return {
-    name: `${peerName}님`,
-    subject: `${peerName}님이`,
-    topic: `${peerName}님은`,
-    object: `${peerName}님을`,
+    name,
+    subject: asSubject(name),
+    topic: asTopic(name),
+    object: asObject(name),
   }
 }
 
@@ -97,17 +100,19 @@ export function copyFor(
   switch (phase) {
     // 처음 켤 때와 비행기에서 꺼졌을 때 둘 다 여기로 온다.
     // **둘 다 할 일이 같으므로** 두 경우에 다 맞는 말로 적는다.
+    // 처음 켤 때와 비행기에서 꺼졌을 때 둘 다 여기로 온다.
+    // **둘 다 할 일이 같으므로** 두 경우에 다 맞는 말로 적는다.
     case 'need-hotspot':
       return {
-        title: '핫스팟이 꺼져 있어요',
-        detail: `켜주시면 ${peer.subject} 바로 들어와요.\n비행기 모드를 켜면 같이 꺼지니 그때마다 다시 켜주세요.`,
+        title: '핫스팟만 켜면 연결돼요',
+        detail: `켜두면 ${peer.subject} 들어올 때 저절로 연결돼요.\n비행기 모드를 켜면 같이 꺼지니 그때마다 다시 켜주세요.`,
         action: '핫스팟 켜러 가기',
       }
 
     case 'waiting-for-peer':
       return {
-        title: '준비됐어요',
-        detail: `${peer.subject} 들어오기를 기다리는 중이에요.\n들어오면 바로 알려드릴게요.`,
+        title: '이제 기다리기만 하면 돼요',
+        detail: `${peer.subject} Wi-Fi 에 들어오면 저절로 연결돼요.\n더 누를 것은 없어요.`,
       }
 
     // 이름을 앱이 알고 있으니 물어볼 필요가 없다.
@@ -115,36 +120,36 @@ export function copyFor(
     // **내가 잘못한 게 아니라는 걸 알아야 마음이 놓인다.**
     case 'need-wifi':
       return {
-        title: 'Wi-Fi 에 들어가면 돼요',
+        title: 'Wi-Fi 만 고르면 연결돼요',
         detail:
           hotspot === null
-            ? `설정에서 ${peer.name} 폰 이름을 골라주세요.\n화면을 보여달라고 하면 이름이 크게 떠 있어요.`
-            : `Wi-Fi 목록에서 ${hotspot.ssid} 를 골라주세요.\n안 보이면 ${peer.subject} 잠시 껐을 수도 있어요. 곧 다시 켜질 거예요.`,
+            ? `설정에서 ${peer.name} 폰 이름을 골라주세요.\n고르고 나면 저절로 연결돼요.`
+            : `Wi-Fi 목록에서 ${hotspot.ssid} 를 골라주세요.\n고르고 나면 저절로 연결돼요.`,
         action: 'Wi-Fi 고르러 가기',
       }
 
     case 'looking':
       return {
-        title: '거의 다 됐어요',
-        detail: '근처를 둘러보는 중이에요. 곧 만나요.',
+        title: '연결하는 중이에요',
+        detail: `${peer.object} 찾고 있어요.\n더 누를 것은 없어요.`,
       }
 
     case 'found':
       return {
         title: `${peer.object} 찾았어요`,
-        detail: '바로 이어드릴게요.',
+        detail: '바로 연결할게요.',
       }
 
     case 'joining':
       return {
-        title: '이어지는 중',
+        title: '연결하는 중',
         detail: '잠깐만요.',
       }
 
     case 'recovering':
       return {
         title: '잠깐 멀어졌어요',
-        detail: '알아서 다시 이어드릴게요. 그동안 쓴 말은 사라지지 않아요.',
+        detail: '알아서 다시 연결할게요. 그동안 쓴 말은 사라지지 않아요.',
       }
   }
 }

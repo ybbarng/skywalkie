@@ -22,9 +22,11 @@ export default function ChooseCharacter() {
   const ensureProfile = useSetupStore(s => s.ensureProfile)
   const chooseCharacter = useSetupStore(s => s.chooseCharacter)
   const setDisplayName = useSetupStore(s => s.setDisplayName)
+  const setPeerNickname = useSetupStore(s => s.setPeerNickname)
 
   const [character, setCharacter] = useState<CharacterId>('aria')
   const [name, setName] = useState('')
+  const [calling, setCalling] = useState('')
 
   useEffect(() => {
     void ensureProfile()
@@ -35,6 +37,7 @@ export default function ChooseCharacter() {
     if (profile === null) return
     setCharacter(profile.character)
     if (profile.displayName.length > 0) setName(profile.displayName)
+    if (profile.peerNickname !== undefined) setCalling(profile.peerNickname)
   }, [profile])
 
   const trimmed = name.trim()
@@ -44,13 +47,14 @@ export default function ChooseCharacter() {
     <StepLayout
       step={2}
       totalSteps={4}
-      title="나를 어떻게 보여줄까요"
-      description="여기서 고른 모습과 이름이 상대 화면에 나타나요."
+      title="우리 둘을 정해요"
+      description="내 모습과 이름, 그리고 상대를 뭐라고 부를지 정해요."
       primaryDisabled={!ready}
       onPrimary={() => {
         void (async () => {
           await chooseCharacter(character)
           await setDisplayName(trimmed)
+          await setPeerNickname(calling)
           router.push('/onboarding/audio-mode')
         })()
       }}
@@ -119,6 +123,83 @@ export default function ChooseCharacter() {
             상대 화면에 이 이름이 떠요. 한 글자라도 적어주세요.
           </Text>
         )}
+      </Card>
+
+      {/*
+        **상대가 고른 이름은 이어져야 알 수 있다.**
+
+        그런데 이어지기 전 화면이 첫 실행에서 반드시 뜬다. 그때
+        "상대가 들어오기를 기다려요" 라고 하면 누구를 기다리는지
+        모르는 것처럼 들린다. 사실은 안다. 옆자리에 앉은 사람이다.
+      */}
+      <Card>
+        <Text variant="heading" style={{ marginBottom: theme.spacing.xs }}>
+          상대를 뭐라고 부를까요
+        </Text>
+        <Text
+          variant="caption"
+          color="textMuted"
+          style={{ marginBottom: theme.spacing.sm }}
+        >
+          이어지기 전까지 내 화면에만 보여요. 상대에게는 안 보입니다.
+        </Text>
+
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: theme.spacing.sm,
+            marginBottom: theme.spacing.sm,
+          }}
+        >
+          {['여자친구', '남자친구', '짝꿍'].map(word => {
+            const active = calling === word
+
+            return (
+              <Pressable
+                key={word}
+                onPress={() => setCalling(active ? '' : word)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                style={{
+                  borderRadius: theme.radius.lg,
+                  borderWidth: active ? 2 : 1,
+                  borderColor: active ? theme.colors.me : theme.colors.border,
+                  backgroundColor: active
+                    ? theme.colors.surfaceRaised
+                    : theme.colors.surface,
+                  paddingHorizontal: theme.spacing.md,
+                  paddingVertical: theme.spacing.sm,
+                }}
+              >
+                <Text variant={active ? 'bodyStrong' : 'body'}>{word}</Text>
+              </Pressable>
+            )
+          })}
+        </View>
+
+        <TextInput
+          value={calling}
+          onChangeText={setCalling}
+          placeholder="직접 적어도 돼요"
+          placeholderTextColor={theme.colors.textFaint}
+          maxLength={20}
+          autoCorrect={false}
+          style={{
+            ...theme.typography.body,
+            color: theme.colors.text,
+            backgroundColor: theme.colors.bg,
+            borderRadius: theme.radius.md,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            paddingHorizontal: theme.spacing.md,
+            paddingVertical: theme.spacing.md,
+          }}
+        />
+
+        <Text variant="caption" color="textMuted" style={{ marginTop: theme.spacing.sm }}>
+          비워둬도 돼요. 그때는 그냥 "상대"라고 적습니다.
+        </Text>
       </Card>
     </StepLayout>
   )

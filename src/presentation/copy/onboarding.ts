@@ -72,7 +72,7 @@ export const connectSteps: Record<Role, readonly ConnectStep[]> = {
  * 선택지가 실질적으로 하나뿐이다. 물어보면 헷갈림만 는다.
  */
 export const roleReason = {
-  host: '안드로이드 폰이라 이어주는 쪽을 맡아요',
+  host: '안드로이드 폰이라 핫스팟을 여는 쪽을 맡아요',
   guest: '아이폰이라 들어가는 쪽을 맡아요',
 } as const
 
