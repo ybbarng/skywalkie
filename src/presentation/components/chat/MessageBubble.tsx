@@ -1,10 +1,8 @@
 import { View } from 'react-native'
-import Animated, { FadeInDown } from 'react-native-reanimated'
 import type { Message } from '@/domain/message/Message'
 import type { CharacterId } from '@/domain/peer/Character'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { Sticker } from '../../characters/Sticker'
-import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { useTheme } from '../../theme/ThemeProvider'
 import { DoodleRenderer } from '../doodle/DoodleRenderer'
 import { Icon } from '../Icon'
@@ -44,7 +42,6 @@ export function MessageBubble({
   onStopVoice,
 }: MessageBubbleProps) {
   const theme = useTheme()
-  const reducedMotion = useReducedMotion()
   const mine = message.isMine(me)
 
   if (message.content.kind === 'system') {
@@ -61,9 +58,15 @@ export function MessageBubble({
     message.content.kind === 'photo' ||
     message.content.kind === 'doodle'
 
+  // **들고 나는 움직임을 쓰지 않는다.**
+  //
+  // `reanimated` 의 레이아웃 움직임은 그려지는 자리와 실제 자리를
+  // 어긋나게 만든다. 말풍선이 서로 겹쳐 보인 것이 이것 때문이다.
+  // 설명 창에서 단추가 안 눌린 것도 같은 원인이었다.
+  //
+  // 대화가 읽히는 것이 살짝 떠오르는 것보다 중요하다.
   return (
-    <Animated.View
-      entering={reducedMotion ? undefined : FadeInDown.duration(theme.duration.bubble)}
+    <View
       style={{
         alignSelf: mine ? 'flex-end' : 'flex-start',
         maxWidth: '82%',
@@ -114,7 +117,7 @@ export function MessageBubble({
           {mine && <DeliveryMark state={message.delivery} onRetry={onRetry} />}
         </View>
       )}
-    </Animated.View>
+    </View>
   )
 }
 

@@ -241,6 +241,19 @@ export class CompositeTransport implements MessageTransport {
 
     this.subscriptions.set(next, unsubscribes)
 
+    /*
+      **고른 것만으로 이어진 게 아니다.**
+
+      전에는 고르는 순간 "연결됨" 으로 바꿨다. 그런데 여는 쪽의 Wi-Fi 는
+      상대가 없어도 서버를 띄우는 것만으로 열린다. 그래서 아무도 없는데
+      화면에는 "이어져 있어요" 가 떴고, 말을 보내면 안 갔다.
+      **거짓말하는 화면이 안 되는 화면보다 나쁘다.**
+
+      진짜로 이어졌을 때만 바꾼다. 아직이면 찾는 중 그대로 두고,
+      이어지는 순간 위의 `onStateChange` 가 바꿔준다.
+    */
+    if (!next.currentState().isUsable()) return
+
     const established = this.toConnected(next.kind)
     if (established.ok) this.setState(established.value)
   }
