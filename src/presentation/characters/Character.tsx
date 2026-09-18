@@ -211,6 +211,40 @@ function Hair({ id, palette }: { id: CharacterId; palette: Palette }) {
           <Circle cx={92} cy={40} r={8} fill={palette.hairShade} />
         </G>
       )
+    case 'mira':
+      return (
+        <G>
+          <Path
+            d="M30 58c0-20 13-32 30-32s30 12 30 32c-2-10-7-15-13-16-7 4-27 4-34 0-6 1-11 6-13 16z"
+            fill={palette.hair}
+          />
+          {/* 물결지며 볼까지 내려오는 끝 */}
+          <Circle cx={30} cy={60} r={7} fill={palette.hair} />
+          <Circle cx={90} cy={60} r={7} fill={palette.hair} />
+        </G>
+      )
+    case 'kai':
+      // 모자에 거의 가려서 옆머리만 보인다
+      return (
+        <Path
+          d="M32 54c1-15 13-25 28-25s27 10 28 25c-4-7-10-10-16-11-8 3-16 3-24 0-6 1-12 4-16 11z"
+          fill={palette.hair}
+        />
+      )
+    case 'ren':
+      return (
+        <G>
+          <Path
+            d="M31 50c2-16 14-26 29-26s27 10 29 26c-4-6-10-9-16-10-8 3-18 3-26 0-6 1-12 4-16 10z"
+            fill={palette.hair}
+          />
+          {/* 뻗친 끝 */}
+          <Path
+            d="M38 30l-5-13 12 8zM57 23l1-14 8 12zM79 29l7-13-12 8z"
+            fill={palette.hairShade}
+          />
+        </G>
+      )
     case 'pilot':
       return (
         <Path
@@ -285,6 +319,51 @@ function Accessory({ id, palette }: { id: CharacterId; palette: Palette }) {
         <G>
           <Rect x={38} y={88} width={44} height={10} rx={5} fill={palette.accessory} />
           <Rect x={72} y={92} width={9} height={22} rx={4} fill={palette.accessory} />
+        </G>
+      )
+    case 'mira':
+      // 귀걸이. 머리 끝보다 아래에 둬야 보인다
+      return (
+        <G>
+          <Path
+            d="M31 68v4M89 68v4"
+            stroke={palette.accessory}
+            strokeWidth={1.8}
+            strokeLinecap="round"
+          />
+          <Circle cx={31} cy={74} r={3} fill={palette.accessory} />
+          <Circle cx={89} cy={74} r={3} fill={palette.accessory} />
+        </G>
+      )
+    case 'kai':
+      // 비니. 눈썹을 가리지 않도록 이마 위에서 멈춘다
+      return (
+        <G>
+          <Path d="M32 36c0-16 12-26 28-26s28 10 28 26z" fill={palette.accessory} />
+          <Rect x={29} y={33} width={62} height={8} rx={4} fill={palette.accessory} />
+          <Circle cx={60} cy={9} r={4.5} fill={palette.clothing} />
+        </G>
+      )
+    case 'ren':
+      // 마이크가 달린 헤드셋. 한쪽에만 붙어 헤드폰과 구별된다
+      return (
+        <G>
+          <Path
+            d="M29 54a32 32 0 0 1 62 0"
+            stroke={palette.accessory}
+            strokeWidth={3.5}
+            fill="none"
+            strokeLinecap="round"
+          />
+          <Rect x={23} y={52} width={9} height={15} rx={4.5} fill={palette.accessory} />
+          <Path
+            d="M28 66q-2 9 11 11"
+            stroke={palette.accessory}
+            strokeWidth={2.6}
+            fill="none"
+            strokeLinecap="round"
+          />
+          <Circle cx={42} cy={78} r={3.4} fill={palette.accessory} />
         </G>
       )
     case 'pilot':
