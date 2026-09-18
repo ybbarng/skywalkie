@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { ConversationSync } from '@/application/messaging/ConversationSync'
 import { FlushPendingMessages } from '@/application/messaging/FlushPendingMessages'
 import { LoadConversation } from '@/application/messaging/LoadConversation'
 import { MarkAsRead } from '@/application/messaging/MarkAsRead'
@@ -6,13 +7,15 @@ import { ReceiveMessage } from '@/application/messaging/ReceiveMessage'
 import { SendMessage } from '@/application/messaging/SendMessage'
 import type { ConversationRepository } from '@/application/ports/ConversationRepository'
 import type { Envelope } from '@/application/ports/Envelope'
+import { PROTOCOL_VERSION } from '@/application/ports/Envelope'
 import type { MessageTransport } from '@/application/ports/MessageTransport'
 import { SerialQueue } from '@/application/shared/SerialQueue'
 import { ids } from '@/composition/services'
 import type { ConnectionState } from '@/domain/connection/ConnectionState'
 import type { Conversation } from '@/domain/message/Conversation'
 import type { Message } from '@/domain/message/Message'
-import { textContent } from '@/domain/message/MessageContent'
+import { nudgeContent, textContent } from '@/domain/message/MessageContent'
+import type { CharacterId } from '@/domain/peer/Character'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { systemClock } from '@/domain/shared/Clock'
 
@@ -35,9 +38,15 @@ interface ChatState {
   peerTyping: boolean
   /** 아직 못 보낸 것이 몇 개인가 */
   pendingCount: number
+  /** 상대 식별자. 인사하면서 알게 된다 */
+  peerId: string | null
+  /** 코드가 안 맞는 상대가 붙었다 */
+  codeMismatch: boolean
 
   start(deps: ChatDeps): Promise<void>
   send(text: string): Promise<void>
+  sendTyping(typing: boolean): void
+  sendNudge(): Promise<void>
   loadOlder(): Promise<void>
   markVisibleAsRead(): Promise<void>
   stop(): void
@@ -47,6 +56,19 @@ export interface ChatDeps {
   readonly me: PeerId
   readonly transport: MessageTransport
   readonly repository: ConversationRepository
+  /** 인사할 때 상대에게 알려줄 내 정보 */
+  readonly profile: {
+    readonly displayName: string
+    readonly character: CharacterId
+    readonly pairingCode: string
+    readonly appVersion: string
+  }
+  /** 상대를 알게 되면 기억해 둔다 */
+  onPeerKnown?(peer: {
+    peerId: string
+    displayName: string
+    character: CharacterId
+  }): void
 }
 
 export const useChatStore = create<ChatState>((set, get) => {
@@ -54,6 +76,7 @@ export const useChatStore = create<ChatState>((set, get) => {
   let deps: ChatDeps | null = null
   let unsubscribes: Array<() => void> = []
   let typingTimer: ReturnType<typeof setTimeout> | null = null
+  let lastTypingSentAt = 0
 
   /** 화면에 보이는 목록을 저장소에서 다시 읽는다 */
   async function refresh(): Promise<void> {
@@ -70,8 +93,91 @@ export const useChatStore = create<ChatState>((set, get) => {
     })
   }
 
+  function syncOf(active: ChatDeps): ConversationSync {
+    return new ConversationSync(active.repository, active.transport, systemClock, ids)
+  }
+
+  /** 연결되면 인사한다. 이걸 해야 놓친 것을 채울 수 있다 */
+  async function greet(): Promise<void> {
+    const active = deps
+    if (active === null) return
+    const conversation = get().conversation
+    if (conversation === null) return
+
+    await syncOf(active).greet({
+      me: active.me,
+      displayName: active.profile.displayName,
+      character: active.profile.character,
+      pairingCode: active.profile.pairingCode,
+      appVersion: active.profile.appVersion,
+      conversation,
+      peerId: get().peerId ?? undefined,
+    })
+  }
+
   async function handle(envelope: Envelope): Promise<void> {
     if (deps === null) return
+
+    // --- 인사와 놓친 것 채우기 ---
+
+    if (envelope.t === 'hello') {
+      const conversation = get().conversation
+      if (conversation === null) return
+
+      const outcome = await syncOf(deps).onHello({
+        me: deps.me,
+        displayName: deps.profile.displayName,
+        character: deps.profile.character,
+        pairingCode: deps.profile.pairingCode,
+        appVersion: deps.profile.appVersion,
+        conversation,
+        hello: envelope.p,
+      })
+
+      if (outcome.ok && outcome.value.peer !== null) {
+        set({ peerId: outcome.value.peer.peerId, codeMismatch: false })
+        deps.onPeerKnown?.(outcome.value.peer)
+      }
+      if (outcome.ok && !outcome.value.accepted) {
+        // 코드가 안 맞는다. 다른 사람이 붙었다는 뜻이다.
+        set({ codeMismatch: true })
+      }
+      return
+    }
+
+    if (envelope.t === 'hello_ack') {
+      if (!envelope.p.accepted) {
+        set({ codeMismatch: true })
+        return
+      }
+      set({ peerId: envelope.p.peerId, codeMismatch: false })
+      deps.onPeerKnown?.({
+        peerId: envelope.p.peerId,
+        displayName: envelope.p.displayName,
+        character: envelope.p.character,
+      })
+      return
+    }
+
+    if (envelope.t === 'sync_request') {
+      await syncOf(deps).onSyncRequest({ me: deps.me, payload: envelope.p })
+      return
+    }
+
+    if (envelope.t === 'sync_response') {
+      const conversation = get().conversation
+      if (conversation === null) return
+
+      const outcome = await syncOf(deps).onSyncResponse({
+        payload: envelope.p,
+        conversation,
+      })
+      if (outcome.ok) {
+        set({ conversation: outcome.value.conversation })
+        if (outcome.value.restored > 0) await refresh()
+      }
+      return
+    }
 
     if (envelope.t === 'typing') {
       set({ peerTyping: envelope.p.typing })
@@ -87,6 +193,10 @@ export const useChatStore = create<ChatState>((set, get) => {
 
     const conversation = get().conversation
     if (conversation === null) return
+
+    // 메시지를 받았다는 건 상대를 안다는 뜻이다. 기억해 두어야
+    // 다음 인사에서 "네 것을 몇 번까지 받았다"를 제대로 알려준다.
+    if (get().peerId === null) set({ peerId: envelope.p.author })
 
     const receiver = new ReceiveMessage(deps.repository, deps.transport, systemClock, ids)
 
@@ -106,6 +216,8 @@ export const useChatStore = create<ChatState>((set, get) => {
     connection: null,
     peerTyping: false,
     pendingCount: 0,
+    peerId: null,
+    codeMismatch: false,
 
     async start(next) {
       deps = next
@@ -119,10 +231,15 @@ export const useChatStore = create<ChatState>((set, get) => {
           set({ connection: state })
           if (!state.isUsable()) return
 
-          // 연결이 돌아왔다. 쌓인 것을 내보낸다.
+          // 연결이 돌아왔다. 인사하고 쌓인 것을 내보낸다.
+          //
+          // 인사가 먼저다. 인사에서 "나는 몇 번까지 받았다"를 주고받아야
+          // 끊긴 동안 상대가 보낸 것을 되찾을 수 있다.
           void queue.run(async () => {
             const active = deps
             if (active === null) return
+
+            await greet()
 
             const flush = new FlushPendingMessages(
               active.repository,
@@ -167,6 +284,60 @@ export const useChatStore = create<ChatState>((set, get) => {
               ? get().pendingCount
               : get().pendingCount + 1,
           })
+          await refresh()
+        }
+      })
+    },
+
+    /**
+     * 입력 중이라고 알린다.
+     *
+     * 글자마다 보내면 낭비다. 3초에 한 번만 보낸다.
+     * 좁은 길(블루투스)에서는 아예 안 보낸다.
+     */
+    sendTyping(typing: boolean) {
+      const active = deps
+      if (active === null) return
+      if (!active.transport.currentState().isUsable()) return
+      if (active.transport.kind !== 'wifi') return
+
+      const now = Date.now()
+      if (typing && now - lastTypingSentAt < 3000) return
+      lastTypingSentAt = typing ? now : 0
+
+      void active.transport.send({
+        v: PROTOCOL_VERSION,
+        t: 'typing',
+        id: ids.next(),
+        seq: 0,
+        ts: now,
+        p: { typing },
+      })
+    },
+
+    /** 콕 찌르기. 상대 폰이 짧게 진동한다 */
+    async sendNudge() {
+      await queue.run(async () => {
+        const active = deps
+        if (active === null) return
+        const conversation = get().conversation
+        if (conversation === null) return
+
+        const sender = new SendMessage(
+          active.transport,
+          active.repository,
+          systemClock,
+          ids,
+        )
+
+        const result = await sender.execute({
+          author: active.me,
+          content: nudgeContent(),
+          conversation,
+        })
+
+        if (result.ok) {
+          set({ conversation: result.value.conversation })
           await refresh()
         }
       })

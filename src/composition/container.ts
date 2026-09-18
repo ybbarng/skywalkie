@@ -8,7 +8,7 @@ import { migrate } from '@/infrastructure/persistence/migrations'
 import { SqliteConversationRepository } from '@/infrastructure/persistence/SqliteConversationRepository'
 import { CompositeTransport } from '@/infrastructure/transport/CompositeTransport'
 import type { ConnectionRole } from '@/infrastructure/transport/wifi/DiscoveryPlan'
-import { TcpMessageTransport } from '@/infrastructure/transport/wifi/TcpMessageTransport'
+import { WifiLink } from '@/infrastructure/transport/wifi/WifiLink'
 
 /**
  * 어떤 구현을 끼울지 정하는 유일한 곳.
@@ -48,8 +48,14 @@ export async function createContainer(
   const repository = new SqliteConversationRepository(db)
 
   // 지금은 Wi-Fi 하나뿐이다. 블루투스(T20)와 웹(T21)이 여기 붙는다.
+  //
+  // WifiLink 가 찾기와 다시 붙기를 맡는다. TcpMessageTransport 를 그대로
+  // 쓰면 붙는 쪽이 상대 주소를 몰라 아무것도 못 한다.
   const transport = new CompositeTransport([
-    new TcpMessageTransport(options.role, { peerAddress: options.peerAddress }),
+    new WifiLink(options.role, {
+      peerAddress: options.peerAddress,
+      pairingCode: options.pairingCode,
+    }),
   ])
 
   const container: Container = {
@@ -68,8 +74,10 @@ export async function createContainer(
 
 export interface ContainerOptions {
   readonly role: ConnectionRole
-  /** 거는 쪽일 때 걸 주소. 찾기가 끝나면 채워진다 */
+  /** 이미 아는 주소. 코드로 연결하기에서 넘어온다 */
   readonly peerAddress?: string
+  /** 우리 둘만의 코드. 외칠 때 같이 보낸다 */
+  readonly pairingCode?: string
 }
 
 /** 이미 만들어 둔 것. 없으면 null */

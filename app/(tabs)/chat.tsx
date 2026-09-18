@@ -1,10 +1,10 @@
+import Constants from 'expo-constants'
 import { router } from 'expo-router'
 import { useCallback, useEffect, useRef } from 'react'
 import { FlatList, KeyboardAvoidingView, Platform, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { createContainer } from '@/composition/container'
 import type { Message } from '@/domain/message/Message'
-import { nudgeContent } from '@/domain/message/MessageContent'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { peerId } from '@/domain/peer/PeerId'
 import { Character } from '@/presentation/characters/Character'
@@ -16,6 +16,8 @@ import { Text } from '@/presentation/components/Text'
 import { useChatStore } from '@/presentation/stores/useChatStore'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
 import { useTheme } from '@/presentation/theme/ThemeProvider'
+
+const APP_VERSION = Constants.expoConfig?.version ?? '0.1.0'
 
 /**
  * 대화 화면.
@@ -33,10 +35,14 @@ export default function Chat() {
   const peerTyping = useChatStore(s => s.peerTyping)
   const pendingCount = useChatStore(s => s.pendingCount)
   const start = useChatStore(s => s.start)
+  const rememberPeer = useSetupStore(s => s.rememberPeer)
+  const codeMismatch = useChatStore(s => s.codeMismatch)
   const stop = useChatStore(s => s.stop)
   const send = useChatStore(s => s.send)
   const loadOlder = useChatStore(s => s.loadOlder)
   const markVisibleAsRead = useChatStore(s => s.markVisibleAsRead)
+  const sendTyping = useChatStore(s => s.sendTyping)
+  const sendNudgeToPeer = useChatStore(s => s.sendNudge)
 
   const me = useMe(profile?.peerId)
   const listRef = useRef<FlatList<Message>>(null)
@@ -47,13 +53,26 @@ export default function Chat() {
     let cancelled = false
 
     void (async () => {
-      const container = await createContainer({ role: profile.role })
+      const container = await createContainer({
+        role: profile.role,
+        pairingCode: profile.pairingCode,
+      })
       if (!container.ok || cancelled) return
 
       await start({
         me,
         transport: container.value.transport,
         repository: container.value.repository,
+        profile: {
+          displayName: profile.displayName,
+          character: profile.character,
+          pairingCode: profile.pairingCode,
+          appVersion: APP_VERSION,
+        },
+        // 상대를 알게 되면 기억해 둔다. 다음에 켤 때 이름과 캐릭터가 바로 뜬다.
+        onPeerKnown: peer => {
+          void rememberPeer(peer)
+        },
       })
 
       // 연결은 실패해도 화면은 뜬다. 쓴 메시지는 쌓였다가 나중에 나간다.
@@ -64,7 +83,7 @@ export default function Chat() {
       cancelled = true
       stop()
     }
-  }, [profile, me, start, stop])
+  }, [profile, me, start, stop, rememberPeer])
 
   // 화면에 보이는 동안 읽음으로 친다
   useEffect(() => {
@@ -100,6 +119,8 @@ export default function Chat() {
         onPress={() => router.push('/connection-detail')}
       />
 
+      {codeMismatch && <CodeMismatchNotice />}
+
       <PeerHeader
         peerCharacter={peer?.character ?? 'aria'}
         typing={peerTyping}
@@ -132,7 +153,8 @@ export default function Chat() {
 
         <MessageInput
           onSend={text => void send(text)}
-          onNudge={() => void sendNudge()}
+          onTyping={typing => sendTyping(typing)}
+          onNudge={() => void sendNudgeToPeer()}
           offline={!(connection?.isUsable() ?? false)}
         />
       </KeyboardAvoidingView>
@@ -175,6 +197,25 @@ function PeerHeader({
           {!connected ? '연결을 기다리는 중' : typing ? '입력 중...' : '연결됨'}
         </Text>
       </View>
+    </View>
+  )
+}
+
+/** 코드가 안 맞는 상대가 붙었다. 우리 둘이 아니라는 뜻이다 */
+function CodeMismatchNotice() {
+  const theme = useTheme()
+
+  return (
+    <View
+      style={{
+        backgroundColor: theme.colors.danger,
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.sm,
+      }}
+    >
+      <Text variant="caption" style={{ color: theme.colors.onStatus }}>
+        코드가 다른 상대가 붙었어요. 설정 → 코드로 연결하기에서 맞춰주세요.
+      </Text>
     </View>
   )
 }
@@ -227,10 +268,4 @@ function useMe(raw: string | undefined): PeerId | null {
   if (raw === undefined) return null
   const parsed = peerId(raw)
   return parsed.ok ? parsed.value : null
-}
-
-/** T24 에서 실제로 진동을 보낸다 */
-async function sendNudge(): Promise<void> {
-  const content = nudgeContent()
-  void content
 }

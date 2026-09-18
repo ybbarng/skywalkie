@@ -52,6 +52,9 @@ export class LinkedTransport implements MessageTransport {
   /** 늦게 배달할 것들. 순서를 뒤바꿀 때 쓴다 */
   private readonly delayed: Envelope[] = []
 
+  /** 귀를 막았는가. 보내는 쪽은 잘 갔다고 여긴다 */
+  private deaf = false
+
   constructor(
     readonly kind: LinkKind,
     private readonly options: LinkOptions,
@@ -138,6 +141,21 @@ export class LinkedTransport implements MessageTransport {
     this.peer?.loseLocally()
   }
 
+  /**
+   * 귀만 막는다. 보내는 쪽은 잘 갔다고 여긴다.
+   *
+   * **실제로 메시지가 사라지는 경로가 이 모양이다.** 한쪽이 앱을 닫거나
+   * 화면이 꺼져 못 받는 동안 상대는 아무 문제를 못 느낀다.
+   */
+  deafen(): void {
+    this.deaf = true
+  }
+
+  /** 다시 듣기 시작한다 */
+  listen(): void {
+    this.deaf = false
+  }
+
   /** 다시 붙인다 */
   restore(): void {
     this.setState(ConnectionState.connected(this.kind))
@@ -173,6 +191,8 @@ export class LinkedTransport implements MessageTransport {
 
   private receive(envelope: Envelope): void {
     if (!this.state.isUsable()) return
+    // 귀를 막았으면 조용히 버린다. 보내는 쪽은 모른다.
+    if (this.deaf) return
     for (const handler of this.receiveHandlers) handler(envelope)
   }
 
