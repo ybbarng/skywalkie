@@ -46,6 +46,8 @@ interface SetupState {
   setAutoPlayVoice(on: boolean): Promise<void>
   /** 뒤로 가도 연결을 붙들까. 아이폰에만 쓰인다 */
   setKeepAwakeWhileAway(on: boolean): Promise<void>
+  /** 도착 시각과 전체 길이를 적어둔다. 비우면 화면에서 치운다 */
+  setFlight(at: number | null, totalMs: number | null): Promise<void>
   finishOnboarding(): Promise<void>
   restartOnboarding(): Promise<void>
   rememberPeer(peer: KnownPeer): Promise<void>
@@ -143,6 +145,14 @@ export const useSetupStore = create<SetupState>((set, get) => ({
 
   async setKeepAwakeWhileAway(on) {
     await persistPreferences(set, { ...get().preferences, keepAwakeWhileAway: on })
+  },
+
+  async setFlight(at, totalMs) {
+    await persistPreferences(set, {
+      ...get().preferences,
+      ...(at === null ? { arrivesAt: undefined } : { arrivesAt: at }),
+      ...(totalMs === null ? { flightTotalMs: undefined } : { flightTotalMs: totalMs }),
+    })
   },
 
   async finishOnboarding() {

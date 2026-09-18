@@ -145,6 +145,18 @@ export const envelopeSchema = z.discriminatedUnion('t', [
   }),
   z.object({
     ...header,
+    t: z.literal('flight'),
+    p: z.object({
+      // 하루를 넘기면 잘못 넣은 것이다. 0 이면 끈 것
+      remainingMs: z
+        .number()
+        .int()
+        .min(0)
+        .max(24 * 60 * 60 * 1000),
+    }),
+  }),
+  z.object({
+    ...header,
     t: z.literal('sync_request'),
     p: z.object({ missingSeqs: z.array(z.number().int().min(1)).max(500) }),
   }),
@@ -250,6 +262,7 @@ const knownTypes = new Set([
   'typing',
   'nudge',
   'presence',
+  'flight',
   'sync_request',
   'sync_response',
   'call_signal',

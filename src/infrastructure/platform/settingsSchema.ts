@@ -69,6 +69,21 @@ export const preferencesSchema = z.object({
    * 그래서 기본은 꺼둔다.
    */
   keepAwakeWhileAway: z.boolean().default(false),
+  /**
+   * 목적지에 언제 도착하나. 이 폰의 시계로 잰 에폭 밀리초.
+   *
+   * **에폭 밀리초라 시간대와 상관없다.** 비행 중에 폰이 서울에서
+   * 파리로 바뀌어도 이어서 흐른다. 벽시계 글자를 저장하면 그때
+   * 어긋난다.
+   */
+  arrivesAt: z.number().int().positive().optional(),
+  /**
+   * 비행이 통째로 얼마나 긴가.
+   *
+   * **진행 막대를 그리려면 있어야 한다.** 남은 시간만으로는 얼마나
+   * 왔는지 알 수 없다. 도착 시각과 짝으로 다닌다.
+   */
+  flightTotalMs: z.number().int().positive().optional(),
 })
 
 export type Profile = z.infer<typeof profileSchema>

@@ -1,6 +1,7 @@
 import type { Message } from '@/domain/message/Message'
 import { type StickerPose, stickerPoses } from '@/domain/message/MessageContent'
 import { retryDelayMillis } from '@/domain/connection/ConnectionState'
+import { progress, remainingMs, remainingWords } from '@/domain/flight/FlightTimer'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { ulidGenerator } from '@/infrastructure/platform/UlidGenerator'
 import { type ConnectPhase, copyFor } from '@/presentation/copy/connecting'
@@ -221,6 +222,30 @@ function renderHead(device: Device): string {
     + '</div>'
 }
 
+/**
+ * 목적지까지 얼마나 왔나.
+ *
+ * **가로폭이 여정 전체다.** 비행기가 왼쪽에서 오른쪽으로 간다.
+ * 앱의 `FlightBar.tsx` 와 같은 것을 그린다. 진행도와 남은 시간을
+ * 세는 일은 **진짜 도메인 코드**(`FlightTimer.ts`)가 한다.
+ */
+function renderFlight(device: Device): string {
+  const at = device.arrivesAt
+  const total = device.flightTotalMs
+  if (at === null || total === null) return ''
+
+  const left = remainingMs({ arrivesAt: at }, Date.now())
+  const done = progress(left, total)
+  const arrived = left === 0
+
+  return '<div class="flight">'
+    + '<div class="track"><div class="gone" style="width:' + done * 100 + '%"></div>'
+    + `<div class="plane" style="left:${done * 100}%">`
+    + icon('plane', 16, arrived ? 'var(--success)' : 'var(--me)') + '</div></div>'
+    + `<div class="left${arrived ? ' arrived' : ''}">${esc(remainingWords(left))}</div>`
+    + '</div>'
+}
+
 function renderLinkbar(device: Device): string {
   const state = device.connection
 
@@ -296,6 +321,7 @@ function renderPhone(device: Device): string {
 
   return renderStatusbar(device)
     + renderLinkbar(device)
+    + (live ? renderFlight(device) : '')
     + (device.codeMismatch ? '<div class="notice bad">코드가 다른 상대가 붙었어요</div>' : '')
     + (live ? renderHead(device) : '')
     + (live ? renderLog(device) + renderDrawer(device) + renderComposer(device)
@@ -322,6 +348,10 @@ function renderPanel(): string {
     + `<button data-act="drop" ${linked ? '' : 'disabled'}>멀어지기</button>`
     + `<button data-act="reconnect" ${net.jammed ? '' : 'disabled'}>돌아오기</button>`
     + `<button data-act="scenario" ${linked ? '' : 'disabled'}>끊겼다 되찾기 해보기</button>`
+    + '<span class="sep"></span>'
+    + `<button data-act="flight" ${linked ? '' : 'disabled'}>비행 3시간으로 맞추기</button>`
+    + `<button data-act="flight-near" ${linked ? '' : 'disabled'}>거의 도착으로</button>`
+    + `<button data-act="flight-off" ${linked ? '' : 'disabled'}>비행 치우기</button>`
     + '<span class="sep"></span>'
     + `<button class="${net.chop > 1 ? 'on' : ''}" data-act="chop">바이트 쪼개기</button>`
     + `<button class="${net.lossRate > 0 ? 'on' : ''}" data-act="loss">10% 잃어버리기</button>`
@@ -537,6 +567,11 @@ document.addEventListener('click', event => {
 
   if (act === 'scenario') return void recoveryScenario()
 
+  // 안드로이드가 정하면 아이폰에도 건너간다. 진짜 봉투가 오간다.
+  if (act === 'flight') return void android.shareFlight(3 * 60 * 60 * 1000)
+  if (act === 'flight-near') return void android.shareFlight(90 * 1000)
+  if (act === 'flight-off') return void android.shareFlight(0)
+
   if (act === 'hotspot') {
     net.setHotspot(!net.hotspotOn)
     if (!net.hotspotOn) {
@@ -724,6 +759,17 @@ setInterval(() => {
   if (unreadCount(android) > 0) void android.readAll()
   if (unreadCount(iphone) > 0) void iphone.readAll()
 }, 900)
+
+/*
+  비행기를 움직인다.
+
+  앱은 1분마다 다시 센다. 초를 안 보여주니 그걸로 충분하고 배터리도 는다.
+  **데모는 1초마다 센다.** 여기서는 "거의 도착" 이 90초짜리라 1분을
+  기다리면 움직이는 걸 볼 수 없다.
+*/
+setInterval(() => {
+  if (android.arrivesAt !== null || iphone.arrivesAt !== null) render()
+}, 1000)
 
 net.note('net', '가상 망을 열었어요. 핫스팟부터 켜보세요')
 render()

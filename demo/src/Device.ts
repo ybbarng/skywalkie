@@ -7,6 +7,7 @@ import type { Envelope } from '@/application/ports/Envelope'
 import { PROTOCOL_VERSION } from '@/application/ports/Envelope'
 import { SerialQueue } from '@/application/shared/SerialQueue'
 import type { ConnectionState } from '@/domain/connection/ConnectionState'
+import { startFlight } from '@/domain/flight/FlightTimer'
 import { Conversation } from '@/domain/message/Conversation'
 import type { Message } from '@/domain/message/Message'
 import {
@@ -52,6 +53,9 @@ export class Device {
   messages: Message[] = []
   connection: ConnectionState
   peerTyping = false
+  /** 목적지 도착 시각. 이 폰의 시계로 잰 것 */
+  arrivesAt: number | null = null
+  flightTotalMs: number | null = null
   peerId: PeerId | null = null
   peerName: string | null = null
   peerCharacter: CharacterId | null = null
@@ -153,6 +157,24 @@ export class Device {
     const content = stickerContent(this.profile.character, pose)
     if (!content.ok) return
     await this.send(content.value)
+  }
+
+  /** 남은 비행 시간을 정하고 상대에게도 알린다 */
+  async shareFlight(remainingMs: number): Promise<void> {
+    const timer = startFlight(remainingMs, Date.now())
+    this.arrivesAt = timer?.arrivesAt ?? null
+    this.flightTotalMs = timer === null ? null : remainingMs
+
+    await this.transport.send({
+      v: PROTOCOL_VERSION,
+      id: this.ids.next(),
+      seq: 0,
+      ts: Date.now(),
+      t: 'flight',
+      p: { remainingMs: Math.max(0, Math.round(remainingMs)) },
+    })
+
+    this.onChange?.()
   }
 
   async sendNudge(): Promise<void> {
@@ -304,6 +326,16 @@ export class Device {
       })
       if (outcome.ok) this.conversation = outcome.value.conversation
       await this.refresh()
+      return
+    }
+
+    if (envelope.t === 'flight') {
+      // **내 시계로 다시 센다.** 상대 시계를 그대로 쓰면 시차를
+      // 넘을 때 엉뚱해진다.
+      const timer = startFlight(envelope.p.remainingMs, Date.now())
+      this.arrivesAt = timer?.arrivesAt ?? null
+      this.flightTotalMs = timer === null ? null : envelope.p.remainingMs
+      this.onChange?.()
       return
     }
 

@@ -1,7 +1,9 @@
 import { router } from 'expo-router'
-import { Platform, Pressable, ScrollView, Switch, View } from 'react-native'
+import { useState } from 'react'
+import { Platform, Pressable, ScrollView, Switch, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { Preferences } from '@/composition/services'
+import { fromHoursAndMinutes, startFlight } from '@/domain/flight/FlightTimer'
 import { selectableCharacters } from '@/domain/peer/Character'
 import { Character } from '@/presentation/characters/Character'
 import { Card } from '@/presentation/components/Card'
@@ -9,6 +11,7 @@ import { HelpTip } from '@/presentation/components/HelpTip'
 import { Icon } from '@/presentation/components/Icon'
 import { Text } from '@/presentation/components/Text'
 import { alertModeChoice, audioModeChoice } from '@/presentation/copy/onboarding'
+import { useChatStore } from '@/presentation/stores/useChatStore'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
 import { useTheme, useThemePreference } from '@/presentation/theme/ThemeProvider'
 import type { ThemePreference } from '@/presentation/theme/tokens'
@@ -30,6 +33,7 @@ export default function Settings() {
         <ConnectionSection />
         <AppearanceSection />
         <AlertSection />
+        <FlightSection />
         <VoiceSection />
         <AudioSection />
         <ConversationSection />
@@ -331,6 +335,136 @@ function Toggle({
         thumbColor={theme.colors.surface}
         accessibilityLabel={label}
       />
+    </View>
+  )
+}
+
+/**
+ * 목적지까지 남은 시간.
+ *
+ * **한 번 넣으면 둘 다 같은 것을 본다.** 정하는 순간 상대에게
+ * 건너가고, 그때부터 각자의 폰이 알아서 줄여 나간다.
+ */
+function FlightSection() {
+  const theme = useTheme()
+  const preferences = useSetupStore(s => s.preferences)
+  const setFlight = useSetupStore(s => s.setFlight)
+  const shareFlight = useChatStore(s => s.shareFlight)
+
+  const [hours, setHours] = useState('')
+  const [minutes, setMinutes] = useState('')
+
+  const running = preferences.arrivesAt !== undefined
+
+  function apply(): void {
+    const total = fromHoursAndMinutes(Number(hours || '0'), Number(minutes || '0'))
+    if (total === null) return
+
+    const timer = startFlight(total, Date.now())
+    if (timer === null) return
+
+    void setFlight(timer.arrivesAt, total)
+    // 상대도 같은 것을 보게 알린다
+    void shareFlight(total)
+
+    setHours('')
+    setMinutes('')
+  }
+
+  return (
+    <Section title="남은 비행 시간">
+      {running ? (
+        <View style={{ gap: theme.spacing.md }}>
+          <Text variant="caption" color="textMuted">
+            대화 화면 위에 비행기가 떠 있어요. 다시 넣으면 새로 맞춰집니다.
+          </Text>
+          <Pressable
+            onPress={() => {
+              void setFlight(null, null)
+              void shareFlight(0)
+            }}
+            accessibilityRole="button"
+            style={{
+              borderRadius: theme.radius.md,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              paddingVertical: theme.spacing.md,
+              alignItems: 'center',
+            }}
+          >
+            <Text variant="label">치우기</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={{ gap: theme.spacing.md }}>
+          <Text variant="caption" color="textMuted">
+            앞으로 얼마나 남았는지 넣어주세요. 상대 화면에도 같이 떠요.
+          </Text>
+
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}
+          >
+            <TimeBox value={hours} onChange={setHours} unit="시간" />
+            <TimeBox value={minutes} onChange={setMinutes} unit="분" />
+
+            <Pressable
+              onPress={apply}
+              accessibilityRole="button"
+              style={{
+                flex: 1,
+                borderRadius: theme.radius.md,
+                backgroundColor: theme.colors.me,
+                paddingVertical: theme.spacing.md,
+                alignItems: 'center',
+              }}
+            >
+              <Text variant="label" style={{ color: theme.colors.meText }}>
+                맞추기
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+    </Section>
+  )
+}
+
+function TimeBox({
+  value,
+  onChange,
+  unit,
+}: {
+  value: string
+  onChange(next: string): void
+  unit: string
+}) {
+  const theme = useTheme()
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <TextInput
+        value={value}
+        // 숫자만 남긴다. 손으로 넣는 값이라 무엇이든 들어올 수 있다
+        onChangeText={next => onChange(next.replace(/[^0-9]/g, '').slice(0, 2))}
+        placeholder="0"
+        placeholderTextColor={theme.colors.textFaint}
+        keyboardType="number-pad"
+        style={{
+          ...theme.typography.body,
+          color: theme.colors.text,
+          backgroundColor: theme.colors.bg,
+          borderRadius: theme.radius.md,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: theme.spacing.sm,
+          minWidth: 52,
+          textAlign: 'center',
+        }}
+      />
+      <Text variant="caption" color="textMuted">
+        {unit}
+      </Text>
     </View>
   )
 }

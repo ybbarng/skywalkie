@@ -75,6 +75,18 @@ export interface PresencePayload {
   readonly nowPlaying?: string
 }
 
+/**
+ * 목적지까지 남은 시간.
+ *
+ * **시각이 아니라 남은 길이를 보낸다.** 두 폰의 시계가 다를 수 있고,
+ * 시차를 넘으면 한쪽이 먼저 시간대를 바꾼다. 받는 쪽이 자기 시계로
+ * 도착 시각을 다시 센다. (docs/05-messaging-spec.md)
+ */
+export interface FlightPayload {
+  /** 앞으로 이만큼 남았다. 0 이면 끈 것이다 */
+  readonly remainingMs: number
+}
+
 export interface SyncRequestPayload {
   /** 못 받은 순번들 */
   readonly missingSeqs: readonly number[]
@@ -133,6 +145,7 @@ export type Envelope =
   | (EnvelopeHeader & { t: 'typing'; p: TypingPayload })
   | (EnvelopeHeader & { t: 'nudge'; p: NudgePayload })
   | (EnvelopeHeader & { t: 'presence'; p: PresencePayload })
+  | (EnvelopeHeader & { t: 'flight'; p: FlightPayload })
   | (EnvelopeHeader & { t: 'sync_request'; p: SyncRequestPayload })
   | (EnvelopeHeader & { t: 'sync_response'; p: SyncResponsePayload })
   | (EnvelopeHeader & { t: 'call_signal'; p: CallSignalPayload })

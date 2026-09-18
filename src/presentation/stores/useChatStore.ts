@@ -110,6 +110,13 @@ interface ChatState {
   /** 음성 메시지를 듣는다. 이미 듣고 있던 것은 멈춘다 */
   playVoice(assetId: string): Promise<void>
   stopVoice(): Promise<void>
+  /**
+   * 남은 비행 시간을 정하고 상대에게도 알린다.
+   *
+   * **시각이 아니라 남은 길이를 보낸다.** 두 폰의 시계가 다를 수 있고
+   * 시차를 넘으면 한쪽이 먼저 시간대를 바꾼다.
+   */
+  shareFlight(remainingMs: number): Promise<void>
   /** 손으로 그린 낙서. 그림 파일이 아니라 선의 좌표로 간다 */
   sendDoodle(strokes: readonly Stroke[]): Promise<void>
   loadOlder(): Promise<void>
@@ -135,6 +142,8 @@ export interface ChatDeps {
     readonly appVersion: string
   }
   /** 상대를 알게 되면 기억해 둔다 */
+  /** 상대가 남은 비행 시간을 정했다. 내 시계로 다시 센다 */
+  onFlightShared?(remainingMs: number): void
   onPeerKnown?(peer: {
     peerId: string
     displayName: string
@@ -338,6 +347,18 @@ export const useChatStore = create<ChatState>((set, get) => {
             ? envelope.p.batteryLevel
             : get().peerBattery,
       })
+      return
+    }
+
+    if (envelope.t === 'flight') {
+      /**
+       * 상대가 남은 시간을 정했다.
+       *
+       * **내 시계로 도착 시각을 다시 센다.** 상대 시계를 그대로
+       * 쓰면 시차를 넘을 때 엉뚱해진다. 건너오는 데 걸린 몇백
+       * 밀리초만큼 어긋나는데, 비행 시간에 견주면 없는 것과 같다.
+       */
+      deps?.onFlightShared?.(envelope.p.remainingMs)
       return
     }
 
@@ -777,6 +798,21 @@ export const useChatStore = create<ChatState>((set, get) => {
 
       await active.voicePlayer.stop()
       set({ playingVoice: null })
+    },
+
+    async shareFlight(remainingMs) {
+      const active = deps
+      if (active === null) return
+
+      // 못 보내도 내 화면에는 뜬다. 상대는 다음에 붙을 때 다시 알린다.
+      await active.transport.send({
+        v: PROTOCOL_VERSION,
+        id: ids.next(),
+        seq: 0,
+        ts: systemClock.epochMillis(),
+        t: 'flight',
+        p: { remainingMs: Math.max(0, Math.round(remainingMs)) },
+      })
     },
 
     async sendDoodle(strokes) {

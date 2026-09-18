@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { createContainer, currentContainer } from '@/composition/container'
+import { startFlight } from '@/domain/flight/FlightTimer'
 import type { Message } from '@/domain/message/Message'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { peerId } from '@/domain/peer/PeerId'
@@ -19,6 +20,7 @@ import { peerFace, peerLabel, peerName } from '@/presentation/characters/peerFac
 import { ConnectingView } from '@/presentation/components/ConnectingView'
 import { ConnectionBar } from '@/presentation/components/ConnectionBar'
 import { CallOverlay } from '@/presentation/components/call/CallOverlay'
+import { FlightBar } from '@/presentation/components/chat/FlightBar'
 import { MessageBubble } from '@/presentation/components/chat/MessageBubble'
 import { MessageInput } from '@/presentation/components/chat/MessageInput'
 import { StickerPanel } from '@/presentation/components/chat/StickerPanel'
@@ -62,6 +64,7 @@ export default function Chat() {
   const pendingCount = useChatStore(s => s.pendingCount)
   const start = useChatStore(s => s.start)
   const rememberPeer = useSetupStore(s => s.rememberPeer)
+  const setFlight = useSetupStore(s => s.setFlight)
   const codeMismatch = useChatStore(s => s.codeMismatch)
   const stop = useChatStore(s => s.stop)
   const send = useChatStore(s => s.send)
@@ -132,6 +135,11 @@ export default function Chat() {
         },
         // 통화 봉투는 통화 쪽으로 넘긴다
         onCallSignal: payload => useCallStore.getState().handleSignal(payload),
+        // 상대가 남은 시간을 정했다. **내 시계로 다시 센다.**
+        onFlightShared: remaining => {
+          const timer = startFlight(remaining, Date.now())
+          void setFlight(timer?.arrivesAt ?? null, timer === null ? null : remaining)
+        },
       })
 
       // 통화를 쓸 수 있게 붙여둔다. 모듈이 없으면 available 이 false 다.
@@ -335,6 +343,17 @@ export default function Chat() {
         role={profile.role}
         callActive={call.state.isLive()}
       />
+
+      {/*
+        가로폭이 여정 전체다. 비행기가 왼쪽에서 오른쪽으로 간다.
+        정해두지 않았으면 아무것도 안 뜬다.
+      */}
+      {preferences.arrivesAt !== undefined && preferences.flightTotalMs !== undefined && (
+        <FlightBar
+          arrivesAt={preferences.arrivesAt}
+          totalMs={preferences.flightTotalMs}
+        />
+      )}
 
       <PeerHeader
         peerCharacter={peerFace(peer)}

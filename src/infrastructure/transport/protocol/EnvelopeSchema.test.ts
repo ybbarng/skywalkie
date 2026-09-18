@@ -1,7 +1,7 @@
 import { HER, makeUlid } from '@test/support/factories'
 import { describe, expect, it } from 'vitest'
 import { type Envelope, PROTOCOL_VERSION } from '@/application/ports/Envelope'
-import { decodeEnvelope, encodeEnvelope } from './EnvelopeSchema'
+import { decodeEnvelope, encodeEnvelope, envelopeSchema } from './EnvelopeSchema'
 
 function messageEnvelope(overrides: Record<string, unknown> = {}): Envelope {
   return {
@@ -253,5 +253,30 @@ describe('모르는 캐릭터', () => {
     })
 
     expect(decodeEnvelope(future).kind).toBe('invalid')
+  })
+})
+
+/**
+ * 우리가 보내는 종류를 우리가 모르면 안 된다.
+ *
+ * 봉투를 하나 더할 때 **형식에는 넣고 `knownTypes` 에는 안 넣는**
+ * 실수를 하기 쉽다. 그러면 내용이 조금만 틀려도 "모르는 종류" 로
+ * 분류되어, 상대 앱이 새 버전인 줄 알고 넘어간다. 진짜 버그를 놓친다.
+ */
+describe('아는 종류 목록이 형식과 맞는다', () => {
+  it('형식에 있는 종류는 전부 아는 것으로 친다', () => {
+    const inSchema = envelopeSchema.options.map(
+      option => (option.shape.t as { value: string }).value,
+    )
+
+    for (const type of inSchema) {
+      // 내용을 일부러 비워 보낸다. 아는 종류면 "형식이 틀렸다" 가,
+      // 모르는 종류면 "모르겠다" 가 나온다.
+      const outcome = decodeEnvelope(
+        JSON.stringify({ v: 1, id: 'x', seq: 0, ts: 0, t: type }),
+      )
+
+      expect(outcome.kind, `${type} 가 아는 목록에 없다`).toBe('invalid')
+    }
   })
 })
