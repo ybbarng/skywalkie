@@ -1,5 +1,4 @@
 import { loadBlePeripheral } from '@ble/index'
-import { Platform } from 'react-native'
 import type { Envelope } from '@/application/ports/Envelope'
 import { worthSendingOnNarrowLink } from '@/application/ports/Envelope'
 import type { MessageTransport, Unsubscribe } from '@/application/ports/MessageTransport'
@@ -8,6 +7,7 @@ import { LinkQuality } from '@/domain/connection/LinkQuality'
 import { type DomainError, domainError } from '@/domain/shared/DomainError'
 import { err, ok, type Result } from '@/domain/shared/Result'
 import { decodeEnvelope, encodeEnvelope } from '../protocol/EnvelopeSchema'
+import type { ConnectionRole } from '../wifi/DiscoveryPlan'
 import { base64ToBytes, bytesToBase64 } from './base64'
 import { BLE_UUIDS, loadBle } from './bleModule'
 import { askForBluetooth } from './blePermission'
@@ -24,17 +24,8 @@ import { Reassembler } from './chunk/Reassembler'
  *
  * Wi-Fi 는 집에서 준비하고 시험할 때 쓴다.
  *
- * 역할은 **아이폰이 알리고 안드로이드가 찾는다.** 안드로이드 쪽 라이브러리가
- * 찾기만 할 수 있어서(알리기는 못 한다) 이렇게 됐다.
- *
- * ## 아이폰 앱이 앞에 있어야 찾힌다
- *
- * iOS 는 앱이 뒤로 가면 알림에서 서비스 번호를 **숨은 자리로 옮긴다.**
- * 그 자리는 애플 기기만 읽는다. 즉 **아이폰이 뒤에 있으면 안드로이드가
- * 새로 찾지 못한다.** 한 번 이어진 뒤에는 뒤로 가도 끊기지 않는다.
- *
- * 그래서 처음 이을 때만 아이폰 앱을 앞에 두면 된다. 끊긴 뒤 다시 이을
- * 때도 마찬가지다. 화면이 이것을 알려줘야 한다.
+ * 역할은 **여는 쪽이 알리고 붙는 쪽이 찾는다.** 운영체제로 가르지 않는다.
+ * 왜 그런지는 `role` 에 적어뒀다.
  *
  * ## 글만 간다
  *
@@ -65,10 +56,23 @@ export class BleMessageTransport implements MessageTransport {
   private bundle = 0
   private mtu = CONSERVATIVE_MTU
 
-  /** 아이폰은 알리고 안드로이드는 찾는다 */
+  /**
+   * 핫스팟을 열던 쪽(안드로이드)이 알리고, 들어가던 쪽(아이폰)이 찾는다.
+   *
+   * **운영체제로 정하지 않는다.** 예전에는 `Platform.OS` 로 갈라서
+   * 아이폰이 늘 알리는 쪽이었는데, 그러면 두 가지가 막힌다.
+   *
+   * 하나, 아이폰 앱이 뒤로 가면 안드로이드가 다시 못 찾는다(4.1.1).
+   * 둘, 안드로이드 두 대면 **둘 다 찾기만 하다 영영 못 만난다.**
+   *
+   * 맡은 역할로 가르면 둘 다 풀린다. 여는 쪽은 뒤에서도 계속 알릴 수
+   * 있고(앞쪽 알림), 붙는 쪽은 뒤에서도 정해둔 서비스 번호로 찾을 수 있다.
+   */
   private get role(): 'advertiser' | 'scanner' {
-    return Platform.OS === 'ios' ? 'advertiser' : 'scanner'
+    return this.linkRole === 'host' ? 'advertiser' : 'scanner'
   }
+
+  constructor(private readonly linkRole: ConnectionRole) {}
 
   async connect(): Promise<Result<void, DomainError>> {
     this.moveTo(this.state.startSearching())

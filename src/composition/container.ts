@@ -92,7 +92,7 @@ export async function createContainer(
       peerAddress: options.peerAddress,
       pairingCode: options.pairingCode,
     }),
-    new BleMessageTransport(),
+    new BleMessageTransport(options.role),
   ])
 
   // 만들어만 둔다. 실제 모듈은 통화를 걸 때 비로소 불러온다.
