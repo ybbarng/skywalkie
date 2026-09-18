@@ -18,6 +18,7 @@ import android.content.Context
 import android.os.Build
 import android.os.ParcelUuid
 import android.util.Base64
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.UUID
@@ -85,10 +86,26 @@ class BlePeripheralModule : Module() {
   private var mtu = DEFAULT_MTU
   private var advertising = false
 
+  /**
+   * 알리기를 시작해달라고 한 뒤 답을 기다리는 쪽.
+   *
+   * **`startAdvertising` 을 부른다고 알려지는 게 아니다.** 되는지 안
+   * 되는지는 여기 콜백으로 나중에 온다. 이걸 안 기다리면 실패했는데도
+   * 열린 것으로 치고, 아무도 우리를 못 보는 채로 기다리게 된다.
+   */
+  private var pending: Promise? = null
+
+  private fun settle(started: Boolean) {
+    val waiting = pending ?: return
+    pending = null
+    waiting.resolve(started)
+  }
+
   private val advertiseCallback = object : AdvertiseCallback() {
     override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
       advertising = true
       emitState("on")
+      settle(true)
     }
 
     override fun onStartFailure(errorCode: Int) {
@@ -96,6 +113,7 @@ class BlePeripheralModule : Module() {
       // **여기서 예외를 던지지 않는다.** 알리기가 안 되는 것뿐이고
       // 다른 길은 아직 살아 있다.
       emitState("failed")
+      settle(false)
     }
   }
 
@@ -184,11 +202,21 @@ class BlePeripheralModule : Module() {
         .getOrDefault(false)
     }
 
-    AsyncFunction("start") { localName: String ->
-      runCatching { startAdvertising(localName) }.getOrElse {
+    AsyncFunction("start") { localName: String, promise: Promise ->
+      if (advertising) {
+        promise.resolve(true)
+        return@AsyncFunction
+      }
+
+      pending = promise
+
+      val asked = runCatching { startAdvertising(localName) }.getOrElse {
         emitState("failed")
         false
       }
+
+      // 시작조차 못 했으면 콜백이 안 온다. 여기서 끝낸다.
+      if (!asked) settle(false)
     }
 
     AsyncFunction("stop") {
@@ -253,7 +281,9 @@ class BlePeripheralModule : Module() {
     // **이름을 알림에 담지 않는다.** 알림 한 칸이 31바이트뿐인데
     // 서비스 번호(16바이트)만으로도 꽉 찬다. 이름까지 넣으면 알리기가
     // 통째로 실패한다. 이름은 이어진 뒤 인사 봉투로 주고받는다.
-    bluetooth.name = localName
+    //
+    // **폰의 블루투스 이름도 건드리지 않는다.** 남의 이름을 바꾸는
+    // 일이고, 권한에 따라 터지기도 한다.
 
     val settings = AdvertiseSettings.Builder()
       .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)

@@ -244,7 +244,13 @@ export class BleMessageTransport implements MessageTransport {
         }),
       )
 
-      await peripheral.module.start('Skywalkie')
+      // **돌려주는 값을 본다.** 안 보면 알리기가 실패했는데도 열린
+      // 것으로 치고, 아무도 우리를 못 보는 채로 기다리게 된다.
+      const started = await peripheral.module.start('Skywalkie')
+      if (started !== true) {
+        return err(domainError('not-found', '블루투스로 알리지 못했다', 'ble'))
+      }
+
       return ok(undefined)
     } catch (cause) {
       return err(wrap(cause, '블루투스로 알리지 못했다'))
