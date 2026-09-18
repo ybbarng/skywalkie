@@ -45,6 +45,29 @@ export interface Point {
 }
 
 /**
+ * 사진.
+ *
+ * **바이트는 여기 담기지 않는다.** 사진은 봉투 하나에 안 들어가서
+ * 따로 조각내어 나른다. 여기 담기는 것은 "어떤 사진인지"뿐이다.
+ *
+ * `preview` 는 아주 작게 줄인 그림이다. 몇백 바이트라 메시지와 같이
+ * 가고, 진짜 사진이 도착할 때까지 흐릿하게 먼저 보여준다.
+ * **빈 네모를 보여주는 것보다 기다릴 만하다.**
+ */
+export interface PhotoContent {
+  readonly kind: 'photo'
+  /** 조각들을 이 번호로 찾는다 */
+  readonly assetId: string
+  readonly width: number
+  readonly height: number
+  readonly byteLength: number
+  /** 아주 작게 줄인 미리보기 (base64) */
+  readonly preview?: string
+  /** 사람이 붙인 말 */
+  readonly caption?: string
+}
+
+/**
  * 캐릭터 이모티콘.
  *
  * **그림을 나르지 않는다.** 어떤 캐릭터가 어떤 자세인지만 보내면
@@ -101,6 +124,7 @@ export type MessageContent =
   | TextContent
   | DoodleContent
   | StickerContent
+  | PhotoContent
   | NudgeContent
   | SystemContent
 
@@ -201,6 +225,53 @@ export function stickerContent(
   return ok({ kind: 'sticker', character, pose: found })
 }
 
+export const MAX_PREVIEW_LENGTH = 4000
+export const MAX_CAPTION_LENGTH = 200
+
+export function photoContent(input: {
+  assetId: string
+  width: number
+  height: number
+  byteLength: number
+  preview?: string
+  caption?: string
+}): Result<PhotoContent, DomainError> {
+  if (input.assetId.length === 0) {
+    return err(domainError('empty', '사진 번호가 없다', 'photo'))
+  }
+
+  if (!isPositive(input.width) || !isPositive(input.height)) {
+    return err(domainError('invalid-value', '사진 크기가 올바르지 않다', 'photo'))
+  }
+
+  if (!isPositive(input.byteLength)) {
+    return err(domainError('invalid-value', '사진이 비어 있다', 'photo'))
+  }
+
+  if ((input.preview?.length ?? 0) > MAX_PREVIEW_LENGTH) {
+    return err(domainError('too-long', '미리보기가 너무 크다', 'photo'))
+  }
+
+  const caption = input.caption?.trim()
+  if ((caption?.length ?? 0) > MAX_CAPTION_LENGTH) {
+    return err(domainError('too-long', '사진에 붙인 말이 너무 길다', 'photo'))
+  }
+
+  return ok({
+    kind: 'photo',
+    assetId: input.assetId,
+    width: input.width,
+    height: input.height,
+    byteLength: input.byteLength,
+    ...(input.preview === undefined ? {} : { preview: input.preview }),
+    ...(caption === undefined || caption.length === 0 ? {} : { caption }),
+  })
+}
+
+function isPositive(value: number): boolean {
+  return Number.isFinite(value) && value > 0
+}
+
 export function nudgeContent(): NudgeContent {
   return { kind: 'nudge' }
 }
@@ -220,5 +291,8 @@ export function isFromPerson(content: MessageContent): boolean {
  */
 export function fitsNarrowLink(content: MessageContent): boolean {
   // 이모티콘은 자세 이름만 담겨서 몇십 바이트다. 좁은 길로도 간다.
-  return content.kind !== 'doodle'
+  //
+  // 사진은 메시지 자체는 작지만 뒤따라 오는 조각이 크다. 좁은 길에서는
+  // 그 조각이 대화를 통째로 막으므로 Wi-Fi 가 열릴 때까지 기다린다.
+  return content.kind !== 'doodle' && content.kind !== 'photo'
 }

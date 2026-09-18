@@ -1,9 +1,19 @@
 import { openDatabaseAsync } from 'expo-sqlite'
+import type {
+  AssetStore,
+  ImagePicker,
+  ImageResizer,
+} from '@/application/ports/AssetTransfer'
 import type { ConversationRepository } from '@/application/ports/ConversationRepository'
 import type { MessageTransport } from '@/application/ports/MessageTransport'
 import type { AudioSession, VoiceLink } from '@/application/ports/VoiceLink'
 import type { DomainError } from '@/domain/shared/DomainError'
 import { err, ok, type Result } from '@/domain/shared/Result'
+import {
+  ExpoAssetStore,
+  ExpoImagePicker,
+  ExpoImageResizer,
+} from '@/infrastructure/assets/ExpoImageTools'
 import { DeviceAudioSession } from '@/infrastructure/call/DeviceAudioSession'
 import { WebRtcVoiceLink } from '@/infrastructure/call/WebRtcVoiceLink'
 import { ExpoSqlDatabase } from '@/infrastructure/persistence/ExpoSqlDatabase'
@@ -33,6 +43,10 @@ export interface Container {
    */
   readonly voice: VoiceLink
   readonly audio: AudioSession
+  /** 사진을 두고 꺼내는 곳. 메시지 표에는 어떤 사진인지만 담긴다 */
+  readonly assets: AssetStore
+  readonly picker: ImagePicker
+  readonly resizer: ImageResizer
   dispose(): Promise<void>
 }
 
@@ -80,6 +94,9 @@ export async function createContainer(
     transport,
     voice,
     audio,
+    assets: new ExpoAssetStore(),
+    picker: new ExpoImagePicker(),
+    resizer: new ExpoImageResizer(),
     async dispose() {
       await voice.close()
       await audio.deactivate()

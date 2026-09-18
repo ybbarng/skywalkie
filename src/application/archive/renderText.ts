@@ -39,6 +39,8 @@ export function describe(message: ArchivedMessage): string {
       return `(낙서 ${content.strokes.length}줄)`
     case 'sticker':
       return `(${poseWord(content.pose)})`
+    case 'photo':
+      return content.caption === undefined ? '(사진)' : `(사진) ${content.caption}`
     case 'nudge':
       return '(콕 찔렀어요)'
     case 'system':

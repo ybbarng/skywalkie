@@ -9,10 +9,15 @@ import { useTheme } from '../../theme/ThemeProvider'
 import { Icon } from '../Icon'
 import { Text } from '../Text'
 import { DeliveryMark } from './DeliveryMark'
+import { PhotoBubble } from './PhotoBubble'
 
 interface MessageBubbleProps {
   message: Message
   me: PeerId
+  /** 사진을 다 받았으면 그 자리 */
+  assetPath?: string | null
+  /** 받는 중이면 0~1 */
+  assetProgress?: number | null
   /** 바로 앞 메시지와 같은 사람이 보낸 것인가 */
   grouped: boolean
   /** 시각을 보여줄지. 연달아 온 것 중 마지막에만 보여준다 */
@@ -26,6 +31,8 @@ export function MessageBubble({
   grouped,
   showTime,
   onRetry,
+  assetPath = null,
+  assetProgress = null,
 }: MessageBubbleProps) {
   const theme = useTheme()
   const reducedMotion = useReducedMotion()
@@ -40,7 +47,7 @@ export function MessageBubble({
 
   // **이모티콘은 말풍선에 안 담는다.** 그림이 이미 말이라
   // 테두리를 두르면 답답해 보인다.
-  const bare = message.content.kind === 'sticker'
+  const bare = message.content.kind === 'sticker' || message.content.kind === 'photo'
 
   return (
     <Animated.View
@@ -66,7 +73,12 @@ export function MessageBubble({
               }
         }
       >
-        <BubbleContent message={message} textColor={textColor} />
+        <BubbleContent
+          message={message}
+          textColor={textColor}
+          assetPath={assetPath}
+          assetProgress={assetProgress}
+        />
       </View>
 
       {showTime && (
@@ -90,7 +102,17 @@ export function MessageBubble({
   )
 }
 
-function BubbleContent({ message, textColor }: { message: Message; textColor: string }) {
+function BubbleContent({
+  message,
+  textColor,
+  assetPath,
+  assetProgress,
+}: {
+  message: Message
+  textColor: string
+  assetPath: string | null
+  assetProgress: number | null
+}) {
   const theme = useTheme()
 
   switch (message.content.kind) {
@@ -113,6 +135,15 @@ function BubbleContent({ message, textColor }: { message: Message; textColor: st
           character={message.content.character as CharacterId}
           pose={message.content.pose}
           size={120}
+        />
+      )
+
+    case 'photo':
+      return (
+        <PhotoBubble
+          content={message.content}
+          localPath={assetPath}
+          progress={assetProgress}
         />
       )
 

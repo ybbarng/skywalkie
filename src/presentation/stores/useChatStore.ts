@@ -1,10 +1,17 @@
 import { create } from 'zustand'
+import { ReceiveAsset } from '@/application/assets/ReceiveAsset'
+import { SendPhoto } from '@/application/assets/SendPhoto'
 import { ConversationSync } from '@/application/messaging/ConversationSync'
 import { FlushPendingMessages } from '@/application/messaging/FlushPendingMessages'
 import { LoadConversation } from '@/application/messaging/LoadConversation'
 import { MarkAsRead } from '@/application/messaging/MarkAsRead'
 import { ReceiveMessage } from '@/application/messaging/ReceiveMessage'
 import { SendMessage } from '@/application/messaging/SendMessage'
+import type {
+  AssetStore,
+  ImagePicker,
+  ImageResizer,
+} from '@/application/ports/AssetTransfer'
 import type { ConversationRepository } from '@/application/ports/ConversationRepository'
 import type { CallSignalPayload, Envelope } from '@/application/ports/Envelope'
 import { PROTOCOL_VERSION } from '@/application/ports/Envelope'
@@ -43,6 +50,15 @@ interface ChatState {
   connection: ConnectionState | null
   /** 상대가 입력 중인가 */
   peerTyping: boolean
+  /**
+   * 사진이 어디까지 왔나. `assetId` 로 찾는다.
+   *
+   * 0~1 이면 받는 중, 문자열이면 다 받아서 그 자리에 있다.
+   */
+  assetProgress: Record<string, number>
+  assetPaths: Record<string, string>
+  /** 사진을 보내는 중인가. 화면이 버튼을 잠글 때 쓴다 */
+  sendingPhoto: boolean
   /** 아직 못 보낸 것이 몇 개인가 */
   pendingCount: number
   /** 상대 식별자. 인사하면서 알게 된다 */
@@ -66,6 +82,8 @@ interface ChatState {
   sendNudge(): Promise<void>
   /** 내 캐릭터가 자세를 취한다. 자세 이름만 나가서 몇십 바이트다 */
   sendSticker(pose: StickerPose): Promise<void>
+  /** 앨범에서 고르거나 찍어 보낸다 */
+  sendPhoto(from: 'library' | 'camera', caption?: string): Promise<void>
   loadOlder(): Promise<void>
   markVisibleAsRead(): Promise<void>
   stop(): void
@@ -75,6 +93,10 @@ export interface ChatDeps {
   readonly me: PeerId
   readonly transport: MessageTransport
   readonly repository: ConversationRepository
+  /** 사진을 두고 꺼내는 곳 */
+  readonly assets: AssetStore
+  readonly picker: ImagePicker
+  readonly resizer: ImageResizer
   /** 인사할 때 상대에게 알려줄 내 정보 */
   readonly profile: {
     readonly displayName: string
@@ -102,6 +124,43 @@ export const useChatStore = create<ChatState>((set, get) => {
   let deps: ChatDeps | null = null
   let unsubscribes: Array<() => void> = []
   let typingTimer: ReturnType<typeof setTimeout> | null = null
+  let receiver: ReceiveAsset | null = null
+
+  /**
+   * 사진 조각을 받는 이.
+   *
+   * 하나만 두고 계속 쓴다. 매번 새로 만들면 **받던 조각을 잊어버려서**
+   * 끊겼다 붙을 때마다 처음부터 다시 받는다.
+   */
+  function assetReceiver(active: ChatDeps | null): ReceiveAsset | null {
+    if (active === null) return null
+    if (receiver !== null) return receiver
+
+    receiver = new ReceiveAsset(
+      {
+        assets: active.assets,
+        transport: active.transport,
+        clock: systemClock,
+        ids,
+      },
+      {
+        onProgress: (assetId, ratio) => {
+          set({ assetProgress: { ...get().assetProgress, [assetId]: ratio } })
+        },
+        onComplete: assetId => {
+          const { [assetId]: _done, ...rest } = get().assetProgress
+          set({
+            assetProgress: rest,
+            assetPaths: {
+              ...get().assetPaths,
+              [assetId]: active.assets.pathOf(assetId),
+            },
+          })
+        },
+      },
+    )
+    return receiver
+  }
   let lastTypingSentAt = 0
   let searchTimer: ReturnType<typeof setTimeout> | null = null
   let disconnectTimer: ReturnType<typeof setTimeout> | null = null
@@ -207,6 +266,27 @@ export const useChatStore = create<ChatState>((set, get) => {
       return
     }
 
+    if (envelope.t === 'asset_chunk') {
+      await assetReceiver(deps)?.onChunk(envelope.p)
+      return
+    }
+
+    if (envelope.t === 'asset_request') {
+      // 상대가 못 받은 조각을 달라고 한다. 그것만 다시 보낸다.
+      const photo = deps
+      if (photo === null) return
+      const sender = new SendPhoto({
+        transport: photo.transport,
+        repository: photo.repository,
+        assets: photo.assets,
+        resizer: photo.resizer,
+        clock: systemClock,
+        ids,
+      })
+      await sender.sendChunks(envelope.p.assetId, 0, undefined, envelope.p.missing)
+      return
+    }
+
     if (envelope.t === 'call_signal') {
       // **통화 쪽으로 넘기고 여기서는 손을 뗀다.**
       // 통화에서 무슨 일이 나든 메시지 쪽이 흔들리면 안 된다.
@@ -254,6 +334,9 @@ export const useChatStore = create<ChatState>((set, get) => {
     hasMore: false,
     connection: null,
     peerTyping: false,
+    assetProgress: {},
+    assetPaths: {},
+    sendingPhoto: false,
     pendingCount: 0,
     peerId: null,
     codeMismatch: false,
@@ -460,6 +543,71 @@ export const useChatStore = create<ChatState>((set, get) => {
           await refresh()
         }
       })
+    },
+
+    /**
+     * 사진을 보낸다.
+     *
+     * **줄을 세우지 않는다.** 사진은 오래 걸리는데, 줄을 세우면 그동안
+     * 글도 못 보낸다. 대신 한 번에 한 장만 보내게 막는다.
+     */
+    async sendPhoto(from, caption) {
+      const active = deps
+      if (active === null || get().sendingPhoto) return
+
+      set({ sendingPhoto: true })
+
+      try {
+        const picked =
+          from === 'camera'
+            ? await active.picker.takePhoto()
+            : await active.picker.pickFromLibrary()
+
+        if (!picked.ok || picked.value === null) return
+
+        const conversation = get().conversation
+        if (conversation === null) return
+
+        const sender = new SendPhoto({
+          transport: active.transport,
+          repository: active.repository,
+          assets: active.assets,
+          resizer: active.resizer,
+          clock: systemClock,
+          ids,
+        })
+
+        const result = await sender.execute({
+          author: active.me,
+          conversation,
+          uri: picked.value.uri,
+          ...(caption === undefined ? {} : { caption }),
+          onProgress: (sent, total) => {
+            set({
+              assetProgress: {
+                ...get().assetProgress,
+                outgoing: total === 0 ? 1 : sent / total,
+              },
+            })
+          },
+        })
+
+        if (result.ok) {
+          // 내가 보낸 사진은 이미 기기에 있다. 바로 보여준다.
+          const { outgoing: _sent, ...rest } = get().assetProgress
+          set({
+            conversation: result.value.conversation,
+            assetProgress: rest,
+            assetPaths: {
+              ...get().assetPaths,
+              [result.value.assetId]: active.assets.pathOf(result.value.assetId),
+            },
+          })
+          await refresh()
+        }
+      } finally {
+        set({ sendingPhoto: false })
+      }
     },
 
     async loadOlder() {

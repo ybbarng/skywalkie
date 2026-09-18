@@ -1,4 +1,4 @@
-import Svg, { Circle, Line, Path, Polyline } from 'react-native-svg'
+import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg'
 import { useTheme } from '../theme/ThemeProvider'
 import type { ColorTokens } from '../theme/tokens'
 
@@ -32,6 +32,7 @@ export type IconName =
   | 'alert'
   | 'plane'
   | 'heart'
+  | 'photo'
 
 interface IconProps {
   name: IconName
@@ -87,6 +88,14 @@ function renderPaths(name: IconName, p: PathProps) {
         <>
           <Path d="M21 3 10.5 13.5" {...p} />
           <Path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z" {...p} />
+        </>
+      )
+    case 'photo':
+      return (
+        <>
+          <Rect x={3} y={5} width={18} height={14} rx={2.5} {...p} />
+          <Circle cx={8.5} cy={10} r={1.8} {...p} />
+          <Path d="m4 17 5-5 4 4 3-2 4 4" {...p} />
         </>
       )
     case 'heart':

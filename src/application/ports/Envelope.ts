@@ -101,6 +101,25 @@ export interface CallSignalPayload {
   readonly media?: 'voice' | 'video'
 }
 
+/**
+ * 사진 조각 하나.
+ *
+ * 사진은 봉투 하나에 안 들어간다. 잘게 잘라 보내고 그 사이사이로
+ * 글이 지나간다. **큰 봉투 하나를 보내는 동안 글이 막히면 안 된다.**
+ */
+export interface AssetChunkPayload {
+  readonly assetId: string
+  readonly index: number
+  /** base64 로 담은 조각 */
+  readonly data: string
+}
+
+/** 못 받은 조각을 달라고 한다. 끊겼다 다시 붙었을 때 쓴다 */
+export interface AssetRequestPayload {
+  readonly assetId: string
+  readonly missing: readonly number[]
+}
+
 export interface ByePayload {
   readonly reason: 'user-stopped' | 'app-closing' | 'switching-link'
 }
@@ -117,6 +136,8 @@ export type Envelope =
   | (EnvelopeHeader & { t: 'sync_request'; p: SyncRequestPayload })
   | (EnvelopeHeader & { t: 'sync_response'; p: SyncResponsePayload })
   | (EnvelopeHeader & { t: 'call_signal'; p: CallSignalPayload })
+  | (EnvelopeHeader & { t: 'asset_chunk'; p: AssetChunkPayload })
+  | (EnvelopeHeader & { t: 'asset_request'; p: AssetRequestPayload })
   | (EnvelopeHeader & { t: 'bye'; p: ByePayload })
 
 export type EnvelopeType = Envelope['t']
@@ -128,7 +149,8 @@ export type EnvelopeType = Envelope['t']
  * (docs/04-transport-spec.md 4.4)
  */
 export function worthSendingOnNarrowLink(type: EnvelopeType): boolean {
-  return type !== 'typing' && type !== 'presence'
+  // 사진 조각은 좁은 길을 통째로 막는다. Wi-Fi 가 열릴 때까지 기다린다.
+  return type !== 'typing' && type !== 'presence' && type !== 'asset_chunk'
 }
 
 /** 받았다는 답을 기다려야 하는 봉투인가 */

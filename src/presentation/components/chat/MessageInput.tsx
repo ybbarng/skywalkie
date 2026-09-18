@@ -12,6 +12,8 @@ interface MessageInputProps {
   onDoodle?(): void
   /** 이모티콘 서랍을 여닫는다 */
   onStickers?(): void
+  /** 사진을 고른다 */
+  onPhoto?(): void
   /** 끊겨 있으면 알려준다. 입력을 막지는 않는다 */
   offline?: boolean
 }
@@ -28,6 +30,7 @@ export function MessageInput({
   onNudge,
   onDoodle,
   onStickers,
+  onPhoto,
   offline = false,
 }: MessageInputProps) {
   const theme = useTheme()
@@ -69,6 +72,7 @@ export function MessageInput({
       >
         <SideButton icon="alert" label="콕 찌르기" onPress={onNudge} />
         <SideButton icon="heart" label="이모티콘" onPress={onStickers} />
+        <SideButton icon="photo" label="사진" onPress={onPhoto} />
         <SideButton icon="chat" label="낙서" onPress={onDoodle} />
 
         <TextInput
@@ -125,7 +129,7 @@ function SideButton({
   label,
   onPress,
 }: {
-  icon: 'alert' | 'chat' | 'heart'
+  icon: 'alert' | 'chat' | 'heart' | 'photo'
   label: string
   onPress?: () => void
 }) {

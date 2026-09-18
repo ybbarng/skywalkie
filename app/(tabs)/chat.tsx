@@ -59,6 +59,9 @@ export default function Chat() {
   const sendTyping = useChatStore(s => s.sendTyping)
   const sendNudgeToPeer = useChatStore(s => s.sendNudge)
   const sendSticker = useChatStore(s => s.sendSticker)
+  const sendPhoto = useChatStore(s => s.sendPhoto)
+  const assetPaths = useChatStore(s => s.assetPaths)
+  const assetProgress = useChatStore(s => s.assetProgress)
   const searchingTooLong = useChatStore(s => s.searchingTooLong)
   const everConnected = useChatStore(s => s.everConnected)
   const announceDisconnect = useChatStore(s => s.announceDisconnect)
@@ -92,6 +95,9 @@ export default function Chat() {
         me,
         transport: container.value.transport,
         repository: container.value.repository,
+        assets: container.value.assets,
+        picker: container.value.picker,
+        resizer: container.value.resizer,
         profile: {
           displayName: profile.displayName,
           character: profile.character,
@@ -168,14 +174,24 @@ export default function Chat() {
       const showDate =
         previous === undefined || !isSameDay(previous.orderedAt(), item.orderedAt())
 
+      // 사진이면 어디까지 왔는지 같이 넘긴다
+      const assetId = item.content.kind === 'photo' ? item.content.assetId : null
+
       return (
         <>
           {showDate && <DateDivider at={item.orderedAt()} />}
-          <MessageBubble message={item} me={me} grouped={grouped} showTime={showTime} />
+          <MessageBubble
+            message={item}
+            me={me}
+            grouped={grouped}
+            showTime={showTime}
+            assetPath={assetId === null ? null : (assetPaths[assetId] ?? null)}
+            assetProgress={assetId === null ? null : (assetProgress[assetId] ?? null)}
+          />
         </>
       )
     },
-    [me, messages],
+    [me, messages, assetPaths, assetProgress],
   )
 
   if (profile === null || me === null) {
@@ -260,6 +276,7 @@ export default function Chat() {
           onTyping={typing => sendTyping(typing)}
           onNudge={() => void sendNudgeToPeer()}
           onStickers={() => setStickersOpen(open => !open)}
+          onPhoto={() => void sendPhoto('library')}
           offline={!connected}
         />
       </KeyboardAvoidingView>

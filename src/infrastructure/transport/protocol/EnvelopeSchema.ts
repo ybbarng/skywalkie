@@ -44,6 +44,19 @@ const messageContent = z.discriminatedUnion('kind', [
     character: z.string().min(1).max(32),
     pose: z.enum(stickerPoses),
   }),
+  z.object({
+    kind: z.literal('photo'),
+    assetId: z.string().length(26),
+    width: z.number().positive().max(20_000),
+    height: z.number().positive().max(20_000),
+    byteLength: z
+      .number()
+      .int()
+      .positive()
+      .max(8 * 1024 * 1024),
+    preview: z.string().max(4000).optional(),
+    caption: z.string().max(200).optional(),
+  }),
   z.object({ kind: z.literal('nudge') }),
   z.object({
     kind: z.literal('system'),
@@ -142,6 +155,25 @@ export const envelopeSchema = z.discriminatedUnion('t', [
   }),
   z.object({
     ...header,
+    t: z.literal('asset_chunk'),
+    p: z.object({
+      assetId: z.string().length(26),
+      index: z.number().int().min(0).max(1000),
+      // base64 라 원래보다 4/3 배가 된다. 48KB 조각이 64KB 쯤 된다.
+      data: z.string().max(96 * 1024),
+    }),
+  }),
+  z.object({
+    ...header,
+    t: z.literal('asset_request'),
+    p: z.object({
+      assetId: z.string().length(26),
+      /** 못 받은 조각들. 비어 있으면 처음부터 달라는 뜻이다 */
+      missing: z.array(z.number().int().min(0).max(1000)).max(1000),
+    }),
+  }),
+  z.object({
+    ...header,
     t: z.literal('bye'),
     p: z.object({
       reason: z.enum(['user-stopped', 'app-closing', 'switching-link']),
@@ -206,6 +238,8 @@ const knownTypes = new Set([
   'sync_request',
   'sync_response',
   'call_signal',
+  'asset_chunk',
+  'asset_request',
   'bye',
 ])
 
