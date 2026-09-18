@@ -285,6 +285,12 @@ export default function Chat() {
         state={call.state}
         peerName={peer?.displayName ?? '상대'}
         peerCharacter={peer?.character ?? 'aria'}
+        myCharacter={profile.character}
+        localUrl={call.localUrl}
+        remoteUrl={call.remoteUrl}
+        cameraOn={call.cameraOn}
+        onToggleCamera={call.toggleCamera}
+        onSwitchCamera={() => void call.switchCamera()}
         talking={call.talking}
         locked={call.locked}
         muted={call.muted}

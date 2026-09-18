@@ -14,6 +14,7 @@ import { useTheme } from '../../theme/ThemeProvider'
 import { Button } from '../Button'
 import { Icon } from '../Icon'
 import { Text } from '../Text'
+import { VideoStage } from './VideoStage'
 
 /**
  * 통화 창.
@@ -26,6 +27,12 @@ interface CallOverlayProps {
   state: CallState
   peerName: string
   peerCharacter: CharacterId
+  myCharacter: CharacterId
+  localUrl: string | null
+  remoteUrl: string | null
+  cameraOn: boolean
+  onToggleCamera: () => void
+  onSwitchCamera: () => void
   talking: boolean
   locked: boolean
   muted: boolean
@@ -47,6 +54,59 @@ export function CallOverlay(props: CallOverlayProps) {
   const { state } = props
 
   if (state.phase === 'idle') return null
+
+  // 영상 통화 중이면 얼굴이 화면을 채운다
+  if (state.kind === 'video' && state.phase === 'active') {
+    return (
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: theme.colors.bg,
+        }}
+      >
+        <VideoStage
+          localUrl={props.localUrl}
+          remoteUrl={props.remoteUrl}
+          peerCharacter={props.peerCharacter}
+          myCharacter={props.myCharacter}
+          peerVideoOff={props.remoteUrl === null}
+        />
+
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: theme.spacing['3xl'],
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: theme.spacing.lg,
+          }}
+        >
+          <SmallButton
+            icon={props.cameraOn ? 'video' : 'videoOff'}
+            label={props.cameraOn ? '영상 끄기' : '영상 켜기'}
+            onPress={props.onToggleCamera}
+          />
+          <RoundButton
+            tone="danger"
+            icon="phoneOff"
+            label="끊기"
+            onPress={props.onHangUp}
+          />
+          <SmallButton
+            icon="refresh"
+            label="앞뒤 바꾸기"
+            onPress={props.onSwitchCamera}
+          />
+        </View>
+      </View>
+    )
+  }
 
   return (
     <View
@@ -178,6 +238,42 @@ function Ended(props: CallOverlayProps) {
         )}
         <Button label="닫기" tone="neutral" onPress={props.onClose} />
       </View>
+    </View>
+  )
+}
+
+/** 통화 중 곁들이는 작은 버튼 */
+function SmallButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: 'video' | 'videoOff' | 'refresh'
+  label: string
+  onPress: () => void
+}) {
+  const theme = useTheme()
+
+  return (
+    <View style={{ alignItems: 'center', gap: theme.spacing.xs }}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.surfaceRaised,
+        }}
+      >
+        <Icon name={icon} size={22} />
+      </Pressable>
+      <Text variant="caption" color="textMuted">
+        {label}
+      </Text>
     </View>
   )
 }

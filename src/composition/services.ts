@@ -1,4 +1,5 @@
 import type { IdGenerator } from '@/domain/shared/IdGenerator'
+import { loadWebRtc } from '@/infrastructure/call/webrtcModule'
 import {
   defaultPreferences,
   type KnownPeer,
@@ -33,6 +34,17 @@ export { OFFER_MANUAL_AFTER_MS } from '@/infrastructure/transport/wifi/Discovery
 
 /** 지금 어느 망에 붙어 있나. 핫스팟이 꺼진 것을 알아채는 데 쓴다 */
 export { readNetwork } from '@/infrastructure/transport/wifi/NetworkInfo'
+
+/**
+ * 영상을 그리는 것.
+ *
+ * 통화 모듈이 주는 것이라 **없을 수 있다.** 없으면 화면이 캐릭터를
+ * 대신 띄운다. 검은 네모보다 낫고, 무엇보다 앱이 죽지 않는다.
+ */
+export function videoView(): unknown {
+  const loaded = loadWebRtc()
+  return loaded.available ? loaded.module.RTCView : undefined
+}
 
 export type { KnownPeer, Preferences, Profile }
 export { defaultPreferences }
