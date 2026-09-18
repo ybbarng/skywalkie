@@ -2,6 +2,7 @@ import { View } from 'react-native'
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg'
 import type { StickerPose } from '@/domain/message/MessageContent'
 import type { CharacterId } from '@/domain/peer/Character'
+import { describePose } from '../copy/stickers'
 import { useTheme } from '../theme/ThemeProvider'
 import { paletteFor, stickerColor } from './palettes'
 import {
@@ -749,68 +750,5 @@ function Extras({
           />
         </G>
       )
-  }
-}
-
-export function describePose(pose: StickerPose): string {
-  switch (pose) {
-    case 'wave':
-      return '손 흔드는 이모티콘'
-    case 'sleep':
-      return '자는 이모티콘'
-    case 'heart':
-      return '하트 이모티콘'
-    case 'laugh':
-      return '웃는 이모티콘'
-    case 'cry':
-      return '우는 이모티콘'
-    case 'thumbsUp':
-      return '엄지척 이모티콘'
-    case 'eat':
-      return '먹는 이모티콘'
-    case 'bored':
-      return '심심해하는 이모티콘'
-    case 'angry':
-      return '화난 이모티콘'
-    case 'surprised':
-      return '놀란 이모티콘'
-    case 'shy':
-      return '부끄러워하는 이모티콘'
-    case 'wink':
-      return '윙크하는 이모티콘'
-    case 'think':
-      return '생각하는 이모티콘'
-    case 'no':
-      return '안 된다는 이모티콘'
-    case 'cold':
-      return '추워하는 이모티콘'
-    case 'sorry':
-      return '미안해하는 이모티콘'
-    case 'miss':
-      return '보고 싶어하는 이모티콘'
-    case 'excited':
-      return '신난 이모티콘'
-    case 'please':
-      return '부탁하는 이모티콘'
-    case 'clap':
-      return '박수 치는 이모티콘'
-    case 'stuffy':
-      return '답답해하는 이모티콘'
-    case 'loud':
-      return '시끄러워하는 이모티콘'
-    case 'scared':
-      return '무서워하는 이모티콘'
-    case 'stiff':
-      return '뻐근해하는 이모티콘'
-    case 'hot':
-      return '더워하는 이모티콘'
-    case 'toilet':
-      return '화장실 가고 싶다는 이모티콘'
-    case 'hungry':
-      return '배고픈 이모티콘'
-    case 'yummy':
-      return '맛있어하는 이모티콘'
-    case 'full':
-      return '배부른 이모티콘'
   }
 }

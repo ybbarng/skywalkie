@@ -1,8 +1,10 @@
 import type { Message } from '@/domain/message/Message'
 import { type StickerPose, stickerPoses } from '@/domain/message/MessageContent'
+import { retryDelayMillis } from '@/domain/connection/ConnectionState'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { ulidGenerator } from '@/infrastructure/platform/UlidGenerator'
 import { type ConnectPhase, copyFor } from '@/presentation/copy/connecting'
+import { stickerMeaning } from '@/presentation/copy/stickers'
 import { decidePhase } from '@/presentation/stores/connectPhase'
 import { type Expression, character, icon, sticker } from './art'
 import { Device } from './Device'
@@ -55,6 +57,8 @@ const ui = {
   drawer: { host: false, guest: false } as Record<Side, boolean>,
   theme: 'dark' as 'dark' | 'light',
   logOpen: true,
+  /** 길게 누르고 있는 이모티콘. 뜻만 보여주고 보내지 않는다 */
+  asking: null as StickerPose | null,
 }
 
 let dirty = false
@@ -237,12 +241,18 @@ function renderDrawer(device: Device): string {
   const rows = [stickerPoses.slice(0, half), stickerPoses.slice(half)]
     .map(row => '<div class="strip">' + row
       .map(pose =>
-        `<button data-pose="${pose}" data-side="${device.side}">`
+        `<button data-pose="${pose}" data-side="${device.side}"`
+        + `${ui.asking === pose ? ' class="asking"' : ''}>`
         + sticker(device.profile.character, pose, 56) + '</button>')
       .join('') + '</div>')
     .join('')
 
-  return '<div class="drawer"><div class="head"><span>누르면 바로 보내져요</span>'
+  // 길게 누르면 무슨 말인지 알려준다. 진짜 앱과 같은 글을 쓴다
+  const head = ui.asking === null
+    ? '<span>누르면 보내져요 · 길게 누르면 뜻이 떠요</span>'
+    : `<span class="meaning">${esc(stickerMeaning(ui.asking))}</span>`
+
+  return `<div class="drawer"><div class="head">${head}`
     + `<button data-closedrawer="${device.side}">닫기</button></div>`
     + `<div class="strips">${rows}</div></div>`
 }
@@ -403,21 +413,65 @@ async function tryConnect(): Promise<void> {
 }
 
 /**
- * 계속 두드린다.
+ * 계속 두드린다. **간격은 진짜 앱 것을 쓴다.**
  *
- * 실제 앱도 이렇게 한다. 핫스팟이 꺼져 있거나 Wi-Fi 밖이면
- * `discover` 가 바로 실패하고, 조건이 갖춰지는 순간 저절로 붙는다.
+ * 실패할 때마다 1, 2, 4, 8, 16, 30초로 늘린다(`retryDelayMillis`).
+ * 쉬지 않고 두드리면 배터리가 먼저 죽고, 그러면 세 시간을 못 버틴다.
+ *
+ * 그래서 조건이 갖춰져도 **곧바로 붙지 않을 수 있다.** 실제 앱이 그렇다.
+ * 기다리기 싫으면 위의 `돌아오기` 처럼 사람이 다시 시도할 수 있다
+ * (앱의 `retryNow`).
  */
 let knocking = false
-setInterval(() => {
+let attempt = 0
+let knockTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleKnock(): void {
+  if (knockTimer !== null) return
+
+  const delay = attempt === 0 ? 300 : retryDelayMillis(attempt)
+  if (attempt > 0) {
+    net.note('guest', `${Math.round(delay / 1000)}초 뒤에 다시 걸어볼게요`)
+  }
+
+  knockTimer = setTimeout(() => {
+    knockTimer = null
+    void knock()
+  }, delay)
+}
+
+async function knock(): Promise<void> {
   if (knocking) return
-  if (net.isLinked() || !net.hotspotOn || !net.guestJoined || net.jammed) return
+  if (net.isLinked()) {
+    attempt = 0
+    return
+  }
+  if (!net.hotspotOn || !net.guestJoined || net.jammed) {
+    // 아직 조건이 안 됐다. 이건 실패로 세지 않는다
+    attempt = 0
+    scheduleKnock()
+    return
+  }
 
   knocking = true
-  void tryConnect().finally(() => {
+  try {
+    await tryConnect()
+    attempt = net.isLinked() ? 0 : attempt + 1
+  } finally {
     knocking = false
-  })
-}, 800)
+    scheduleKnock()
+  }
+}
+
+scheduleKnock()
+
+/** 사람이 다시 시도한다. 기다리지 않고 지금 건다 (앱의 `retryNow`) */
+function knockNow(): void {
+  attempt = 0
+  if (knockTimer !== null) clearTimeout(knockTimer)
+  knockTimer = null
+  void knock()
+}
 
 /** 핫스팟 켜기부터 잇기까지 한 번에 */
 async function autoConnect(): Promise<void> {
@@ -430,7 +484,7 @@ async function autoConnect(): Promise<void> {
   paint()
   await sleep(400)
 
-  await tryConnect()
+  knockNow()
 }
 
 /**
@@ -460,6 +514,7 @@ async function recoveryScenario(): Promise<void> {
 
   net.note('net', '신호를 돌려줍니다. 앱이 알아서 다시 붙어요')
   net.setJammed(false)
+  knockNow()
   paint()
 }
 
@@ -501,6 +556,7 @@ document.addEventListener('click', event => {
   if (act === 'reconnect') {
     // 신호만 돌려준다. 붙는 건 앱이 알아서 한다.
     net.setJammed(false)
+    knockNow()
     return paint()
   }
 
@@ -571,11 +627,56 @@ document.addEventListener('click', event => {
   }
 
   if (target.dataset.pose !== undefined) {
+    // 뜻을 묻는 중이었으면 보내지 않는다. 손을 뗀 것뿐이다.
+    if (longPressed) return
+
     ui.drawer[side] = false
     void devices[side].sendSticker(target.dataset.pose as StickerPose)
     return paint()
   }
 })
+
+/**
+ * 길게 누르면 뜻을 알려준다.
+ *
+ * **그림만으로는 애매한 것이 있다.** 팔짱 낀 건 "안 돼"인지 "추워"인지
+ * 헷갈린다. 짧게 누르면 그대로 나가므로 보내는 데 한 걸음이 늘지 않는다.
+ * 앱의 `onLongPress` 와 같은 자리다.
+ */
+let holdTimer: ReturnType<typeof setTimeout> | null = null
+let longPressed = false
+
+function startHold(pose: StickerPose): void {
+  longPressed = false
+  if (holdTimer !== null) clearTimeout(holdTimer)
+
+  holdTimer = setTimeout(() => {
+    longPressed = true
+    ui.asking = pose
+    paint()
+  }, 300)
+}
+
+function endHold(): void {
+  if (holdTimer !== null) clearTimeout(holdTimer)
+  holdTimer = null
+
+  if (ui.asking !== null) {
+    ui.asking = null
+    paint()
+  }
+}
+
+document.addEventListener('pointerdown', event => {
+  const target = (event.target as HTMLElement).closest<HTMLElement>('[data-pose]')
+  if (target?.dataset.pose === undefined) return
+
+  startHold(target.dataset.pose as StickerPose)
+})
+
+document.addEventListener('pointerup', endHold)
+document.addEventListener('pointercancel', endHold)
+document.addEventListener('pointerleave', endHold)
 
 document.addEventListener('input', event => {
   const input = event.target as HTMLInputElement
