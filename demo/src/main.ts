@@ -9,7 +9,7 @@ import { stickerMeaning } from '@/presentation/copy/stickers'
 import { decidePhase } from '@/presentation/stores/connectPhase'
 import { type Expression, character, icon, sticker } from './art'
 import { Device } from './Device'
-import { HOTSPOT_SSID, type Side, VirtualNetwork } from './network'
+import { type Side, VirtualNetwork } from './network'
 
 /**
  * 가상 기기 두 대를 띄운다.
@@ -195,10 +195,7 @@ function renderConnecting(device: Device): string {
   const peerName = device.peerName ?? device.profile.peerNickname
 
   // **진짜 문구를 쓴다.** src/presentation/copy/connecting.ts
-  const copy = copyFor(phaseOf(device), peerName, {
-    ssid: HOTSPOT_SSID,
-    password: '',
-  })
+  const copy = copyFor(phaseOf(device), peerName)
 
   const action = copy.action === undefined
     ? ''

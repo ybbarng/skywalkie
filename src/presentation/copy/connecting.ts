@@ -1,4 +1,3 @@
-import { type HomeHotspot, homeHotspot } from '@/composition/hotspot'
 import type { Profile } from '@/composition/services'
 import { asObject, asSubject, asTopic } from './josa'
 
@@ -19,13 +18,13 @@ export type Role = Profile['role']
 
 /** 지금 어느 단계인가. 기술이 아니라 사람이 보는 단계다 */
 export type ConnectPhase =
-  /** 안드로이드: 핫스팟이 꺼져 있다. 처음이든 도중에 꺼졌든 */
+  /** 알리는 쪽: 블루투스가 꺼져 있다. 처음이든 도중에 꺼졌든 */
   | 'need-hotspot'
-  /** 안드로이드: 켰고 상대를 기다린다 */
+  /** 알리는 쪽: 켰고 상대를 기다린다 */
   | 'waiting-for-peer'
-  /** 아이폰: 상대 Wi-Fi 밖에 있다. 처음이든 도중에 빠졌든 */
+  /** 찾는 쪽: 블루투스가 꺼져 있다 */
   | 'need-wifi'
-  /** 아이폰: 붙었고 상대를 찾는 중 */
+  /** 찾는 쪽: 켰고 상대를 뒤지는 중 */
   | 'looking'
   /** 찾았다 */
   | 'found'
@@ -40,13 +39,6 @@ interface PhaseCopy {
   /** 사람이 할 일이 있으면 그 버튼 이름 */
   readonly action?: string
 }
-
-/**
- * 핫스팟을 안 적어뒀을 때 이름 자리에 넣는 말.
- *
- * 예전처럼 **상대 화면을 보고 들어가는** 길로 되돌아간다.
- */
-const UNKNOWN_WIFI = '상대 폰 이름'
 
 /**
  * 상대를 부르는 말.
@@ -85,16 +77,15 @@ function wordsFor(peerName: string | null): PeerWords {
 }
 
 /**
- * 핫스팟을 밖에서 받는다. 받지 않으면 `.env` 에 적어둔 것을 쓴다.
- * 적어두지 않았을 때 어떻게 말하는지를 시험할 수 있어야 해서 열어뒀다.
+ * 지금 단계에 맞는 말.
  *
  * `peerName` 이 `null` 이면 아직 상대를 모른다는 뜻이다.
+ *
+ * **핫스팟 이야기는 안 한다.** 비행기 모드에서는 안 켜진다
+ * (docs/02-tech-decisions.md D1). 자리에 앉아 그 안내를 읽으면
+ * 잠긴 메뉴만 들여다보게 된다.
  */
-export function copyFor(
-  phase: ConnectPhase,
-  peerName: string | null,
-  hotspot: HomeHotspot | null = homeHotspot,
-): PhaseCopy {
+export function copyFor(phase: ConnectPhase, peerName: string | null): PhaseCopy {
   const peer = wordsFor(peerName)
 
   switch (phase) {
@@ -104,15 +95,15 @@ export function copyFor(
     // **둘 다 할 일이 같으므로** 두 경우에 다 맞는 말로 적는다.
     case 'need-hotspot':
       return {
-        title: '핫스팟만 켜면 연결돼요',
-        detail: `켜두면 ${peer.subject} 들어올 때 저절로 연결돼요.\n비행기 모드를 켜면 같이 꺼지니 그때마다 다시 켜주세요.`,
-        action: '핫스팟 켜러 가기',
+        title: '블루투스만 켜면 연결돼요',
+        detail: `켜두면 ${peer.subject} 가까이 올 때 저절로 연결돼요.\n비행기 모드에서도 블루투스는 켤 수 있어요.`,
+        action: '블루투스 켜러 가기',
       }
 
     case 'waiting-for-peer':
       return {
         title: '이제 기다리기만 하면 돼요',
-        detail: `${peer.subject} Wi-Fi 에 들어오면 저절로 연결돼요.\n더 누를 것은 없어요.`,
+        detail: `${peer.subject} 앱을 열면 저절로 연결돼요.\n더 누를 것은 없어요.`,
       }
 
     // 이름을 앱이 알고 있으니 물어볼 필요가 없다.
@@ -120,12 +111,9 @@ export function copyFor(
     // **내가 잘못한 게 아니라는 걸 알아야 마음이 놓인다.**
     case 'need-wifi':
       return {
-        title: 'Wi-Fi 만 고르면 연결돼요',
-        detail:
-          hotspot === null
-            ? `설정에서 ${peer.name} 폰 이름을 골라주세요.\n고르고 나면 저절로 연결돼요.`
-            : `Wi-Fi 목록에서 ${hotspot.ssid} 를 골라주세요.\n고르고 나면 저절로 연결돼요.`,
-        action: 'Wi-Fi 고르러 가기',
+        title: '블루투스만 켜면 연결돼요',
+        detail: `켜두면 ${peer.object} 저절로 찾아요.\n비행기 모드에서도 블루투스는 켤 수 있어요.`,
+        action: '블루투스 켜러 가기',
       }
 
     case 'looking':
@@ -161,39 +149,31 @@ export function copyFor(
  */
 export const takingLong = {
   host: {
-    title: '아직 안 들어왔나요?',
+    title: '아직 안 이어졌나요?',
     lines: [
-      '{peer.topic} Wi-Fi 만 켜면 돼요',
-      '거기에 {wifi} 가 떠 있어야 해요',
-      '비행기 모드를 켰어도 Wi-Fi 는 따로 켤 수 있어요',
+      '{peer.topic} 블루투스를 켜고 앱을 열어두면 돼요',
+      '비행기 모드를 켰어도 블루투스는 따로 켤 수 있어요',
+      '너무 멀면 안 닿아요. 한 번 이어진 뒤에는 멀어져도 괜찮아요',
     ],
   },
   guest: {
-    title: '목록에 안 보이나요?',
+    title: '아직 안 이어졌나요?',
     lines: [
-      '{peer.name} 쪽에서 아직 안 켰을 수도 있어요. 조금 뒤에 다시 보세요',
-      '목록에 {wifi} 가 있는지 보고, 없으면 아래로 당겨 새로고침해 보세요',
-      '비행기 모드를 켰어도 Wi-Fi 는 따로 켤 수 있어요',
+      '{peer.name} 쪽에서 아직 앱을 안 열었을 수도 있어요',
+      '비행기 모드를 켰어도 블루투스는 따로 켤 수 있어요',
+      '너무 멀면 안 닿아요. 한 번 이어진 뒤에는 멀어져도 괜찮아요',
     ],
   },
 } as const
 
-export function longHintFor(
-  role: Role,
-  peerName: string | null,
-  hotspot: HomeHotspot | null = homeHotspot,
-) {
+export function longHintFor(role: Role, peerName: string | null) {
   const hint = takingLong[role]
   const peer = wordsFor(peerName)
-  const wifi = hotspot?.ssid ?? UNKNOWN_WIFI
 
   return {
     title: hint.title,
     lines: hint.lines.map(line =>
-      line
-        .replace('{peer.topic}', peer.topic)
-        .replace('{peer.name}', peer.name)
-        .replace('{wifi}', wifi),
+      line.replace('{peer.topic}', peer.topic).replace('{peer.name}', peer.name),
     ),
   }
 }

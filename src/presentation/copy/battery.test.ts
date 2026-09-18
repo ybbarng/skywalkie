@@ -43,11 +43,11 @@ describe('내 배터리', () => {
     expect(myBatteryNote(0.5, 'host', false)).toBeNull()
   })
 
-  it('핫스팟을 켠 쪽에게는 왜 빨리 주는지 알려준다', () => {
+  it('알리는 쪽에게는 왜 빨리 주는지 알려준다', () => {
     // **끄라고 하지 않는다.** 끄면 대화가 끊긴다.
     const note = myBatteryNote(0.15, 'host', false)
 
-    expect(note).toContain('핫스팟')
+    expect(note).toContain('배터리를 더 써요')
     expect(note).toContain('보조 배터리')
     expect(note).not.toContain('끄세요')
   })
@@ -63,7 +63,7 @@ describe('내 배터리', () => {
     // 핫스팟을 안 켰으니 핫스팟 이야기를 하면 헷갈린다
     const note = myBatteryNote(0.15, 'guest', false)
 
-    expect(note).not.toContain('핫스팟')
+    expect(note).not.toContain('배터리를 더 써요')
   })
 
   it('알리는 선이 상대에게 보여주는 선보다 낮다', () => {

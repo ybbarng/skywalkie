@@ -37,7 +37,7 @@ export function awayReminder(role: Role, peerName: string | null): LinkAlert {
   return role === 'host'
     ? {
         title: '한동안 말이 안 오갔어요',
-        body: `핫스팟이 저 혼자 꺼졌을 수 있어요. 앱을 열면 다시 이어져요.`,
+        body: `블루투스가 꺼졌거나 앱이 닫혔을 수 있어요. 앱을 열면 다시 이어져요.`,
       }
     : {
         title: '한동안 말이 안 오갔어요',
@@ -59,12 +59,12 @@ export function alertFor(
     case 'hotspot-off':
       return role === 'host'
         ? {
-            title: '핫스팟이 꺼졌어요',
-            body: `켜야 ${who} 다시 들어올 수 있어요. 비행기 모드를 켜면 같이 꺼져요.`,
+            title: '블루투스가 꺼졌어요',
+            body: `켜야 ${who} 다시 이어질 수 있어요. 비행기 모드에서도 블루투스는 켤 수 있어요.`,
           }
         : {
-            title: 'Wi-Fi 에서 나왔어요',
-            body: `다시 들어가야 ${who} 보여요. 목록에서 고르기만 하면 돼요.`,
+            title: '블루투스가 꺼졌어요',
+            body: `켜야 ${who} 찾을 수 있어요. 비행기 모드에서도 블루투스는 켤 수 있어요.`,
           }
 
     case 'lost':

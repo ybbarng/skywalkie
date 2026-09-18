@@ -100,18 +100,18 @@ describe('다시 붙었을 때', () => {
 })
 
 describe('잠금 화면에 뜨는 글', () => {
-  it('여는 쪽에는 핫스팟을 켜라고 한다', () => {
+  it('여는 쪽에는 블루투스를 켜라고 한다', () => {
     const alert = alertFor('hotspot-off', 'host', '여자친구')
 
-    expect(alert?.title).toBe('핫스팟이 꺼졌어요')
+    expect(alert?.title).toBe('블루투스가 꺼졌어요')
     expect(alert?.body).toContain('여자친구가')
   })
 
-  it('붙는 쪽에는 Wi-Fi 에 들어가라고 한다', () => {
-    // 아이폰은 핫스팟을 못 켠다. 남의 할 일을 적어두면 찾다가 지친다.
+  it('붙는 쪽에도 블루투스를 켜라고 한다', () => {
+    // 두 폰 다 할 일이 같다. 블루투스를 켜면 된다.
     const alert = alertFor('hotspot-off', 'guest', '남자친구')
 
-    expect(alert?.title).toContain('Wi-Fi')
+    expect(alert?.title).toContain('블루투스')
     expect(alert?.body).not.toContain('핫스팟')
   })
 
@@ -149,11 +149,11 @@ describe('잠금 화면에 뜨는 글', () => {
     }
   })
 
-  it('여는 쪽에는 핫스팟이 저 혼자 꺼졌을 수 있다고 알린다', () => {
+  it('여는 쪽에는 블루투스가 꺼졌을 수 있다고 알린다', () => {
     // 안드로이드는 붙은 기기가 없으면 얼마 뒤 핫스팟을 저 혼자 끈다.
     // 그러면 아이폰이 앱을 열어도 못 들어온다.
-    expect(awayReminder('host', '여자친구').body).toContain('핫스팟')
-    expect(awayReminder('guest', '남자친구').body).not.toContain('핫스팟')
+    expect(awayReminder('host', '여자친구').body).toContain('블루투스')
+    expect(awayReminder('guest', '남자친구').body).not.toContain('블루투스')
   })
 
   it('쓸 말이 비어 있지 않다', () => {
