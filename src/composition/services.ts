@@ -31,5 +31,8 @@ export const settings = settingsImpl
 /** 이만큼 지나도 상대를 못 찾으면 코드 입력을 권한다 */
 export { OFFER_MANUAL_AFTER_MS } from '@/infrastructure/transport/wifi/DiscoveryPlan'
 
+/** 지금 어느 망에 붙어 있나. 핫스팟이 꺼진 것을 알아채는 데 쓴다 */
+export { readNetwork } from '@/infrastructure/transport/wifi/NetworkInfo'
+
 export type { KnownPeer, Preferences, Profile }
 export { defaultPreferences }

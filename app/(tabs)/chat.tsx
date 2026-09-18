@@ -14,8 +14,9 @@ import { MessageBubble } from '@/presentation/components/chat/MessageBubble'
 import { MessageInput } from '@/presentation/components/chat/MessageInput'
 import { TypingIndicator } from '@/presentation/components/chat/TypingIndicator'
 import { Text } from '@/presentation/components/Text'
+import { useNetworkWatch } from '@/presentation/hooks/useNetworkWatch'
 import { useReconnectOnForeground } from '@/presentation/hooks/useReconnectOnForeground'
-import { decidePhase } from '@/presentation/stores/connectPhase'
+import { decidePhase, onOurNetwork } from '@/presentation/stores/connectPhase'
 import { useChatStore } from '@/presentation/stores/useChatStore'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
 import { useTheme } from '@/presentation/theme/ThemeProvider'
@@ -53,6 +54,11 @@ export default function Chat() {
 
   const me = useMe(profile?.peerId)
   const listRef = useRef<FlatList<Message>>(null)
+
+  // 이어져 있는 동안은 지켜볼 필요가 없다. 핫스팟이 꺼지면 어차피 끊긴다.
+  // 끊겼을 때만 보면서 **왜 끊겼는지**를 알아낸다.
+  const connected = connection?.isUsable() ?? false
+  const network = useNetworkWatch(!connected)
 
   useEffect(() => {
     if (profile === null || me === null) return
@@ -144,7 +150,7 @@ export default function Chat() {
       <PeerHeader
         peerCharacter={peer?.character ?? 'aria'}
         typing={peerTyping}
-        connected={connection?.isUsable() ?? false}
+        connected={connected}
         name={peer?.displayName ?? '상대'}
       />
 
@@ -167,14 +173,14 @@ export default function Chat() {
           onEndReachedThreshold={0.2}
           ListHeaderComponent={<LoadMore onPress={() => void loadOlder()} />}
           ListEmptyComponent={
-            connection?.isUsable() === true ? (
+            connected ? (
               <EmptyState />
             ) : (
               <ConnectingView
                 phase={decidePhase({
                   role: profile.role,
                   connection,
-                  onPrivateNetwork: null,
+                  onPrivateNetwork: onOurNetwork(profile.role, network),
                   peerFound,
                   everConnected,
                 })}
@@ -193,7 +199,7 @@ export default function Chat() {
           onSend={text => void send(text)}
           onTyping={typing => sendTyping(typing)}
           onNudge={() => void sendNudgeToPeer()}
-          offline={!(connection?.isUsable() ?? false)}
+          offline={!connected}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
