@@ -79,6 +79,15 @@ const config: ExpoConfig = {
       },
     ],
     'expo-sqlite',
+    // 대화를 꺼내 두고 다시 불러오는 데 쓴다 (T19)
+    'expo-sharing',
+    [
+      'expo-image-picker',
+      {
+        photosPermission: '사진을 골라 보내려면 앨범이 필요해요.',
+        cameraPermission: '사진을 찍어 보내려면 카메라가 필요해요.',
+      },
+    ],
   ],
 
   experiments: {

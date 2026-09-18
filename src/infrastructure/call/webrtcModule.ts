@@ -48,8 +48,6 @@ export function loadWebRtc(): LoadResult {
 function attempt(): LoadResult {
   try {
     // 일부러 정적 import 를 쓰지 않는다. 위 주석을 보라.
-    // biome-ignore lint/style/useNodejsImportProtocol: 네이티브 모듈이다
-    // biome-ignore lint/correctness/noUndeclaredVariables: react-native 의 require
     const loaded = require('react-native-webrtc')
 
     if (

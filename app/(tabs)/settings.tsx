@@ -175,17 +175,15 @@ function ConversationSection() {
     <Section title="대화">
       <Row
         icon="send"
-        label="대화 내보내기"
-        hint="T19 에서 열립니다"
-        disabled
-        onPress={() => undefined}
+        label="대화 꺼내두기"
+        hint="앱이 사라져도 대화는 남아요"
+        onPress={() => router.push('/export')}
       />
       <Row
         icon="refresh"
-        label="대화 불러오기"
-        hint="T19 에서 열립니다"
-        disabled
-        onPress={() => undefined}
+        label="대화 되돌리기"
+        hint="꺼내둔 파일을 다시 넣어요"
+        onPress={() => router.push('/export')}
       />
     </Section>
   )
