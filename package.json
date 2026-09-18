@@ -73,9 +73,11 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.0",
+    "@testing-library/react-native": "^14.0.1",
     "@types/react": "~19.2.2",
     "@vitest/coverage-v8": "^5.0.1",
     "lefthook": "^2.1.14",
+    "react-test-renderer": "^19.3.0",
     "sharp": "^0.35.4",
     "tsx": "^4.23.13",
     "typescript": "~6.0.3",

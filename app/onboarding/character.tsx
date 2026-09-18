@@ -51,11 +51,26 @@ export default function ChooseCharacter() {
       description="내 모습과 이름, 그리고 상대를 뭐라고 부를지 정해요."
       primaryDisabled={!ready}
       onPrimary={() => {
+        /*
+          **넘어가는 것이 먼저다.**
+
+          예전에는 저장을 다 마친 뒤에 넘어갔다. 그런데 저장이 답을 안
+          하면 거기서 멎어버려서 **안내를 통째로 못 넘어갔다.** 오류도
+          안 뜨고 버튼만 안 먹는 것처럼 보인다. 앱을 깔고도 대화를
+          시작조차 못 한 것이 이것 때문이었다.
+
+          정한 값은 화면이 이미 들고 있다. 저장은 뒤따라가면 된다.
+          설정 한 줄을 못 남기는 것이 앱을 못 쓰는 것보다 훨씬 낫다.
+
+          메시지는 여기 해당하지 않는다. 그쪽은 잃으면 안 되므로
+          저장을 먼저 한다(CLAUDE.md).
+        */
+        router.push('/onboarding/audio-mode')
+
         void (async () => {
           await chooseCharacter(character)
           await setDisplayName(trimmed)
           await setPeerNickname(calling)
-          router.push('/onboarding/audio-mode')
         })()
       }}
     >
@@ -91,8 +106,15 @@ export default function ChooseCharacter() {
       </View>
 
       <Card>
-        <Text variant="heading" style={{ marginBottom: theme.spacing.sm }}>
-          상대에게 보일 이름
+        <Text variant="heading" style={{ marginBottom: theme.spacing.xs }}>
+          상대에게 보일 내 이름
+        </Text>
+        <Text
+          variant="caption"
+          color="textMuted"
+          style={{ marginBottom: theme.spacing.sm }}
+        >
+          이것만 적으면 넘어갈 수 있어요.
         </Text>
 
         <TextInput
@@ -102,6 +124,9 @@ export default function ChooseCharacter() {
           placeholderTextColor={theme.colors.textFaint}
           maxLength={20}
           autoCorrect={false}
+          // 키보드에 완료를 띄운다. 이게 없으면 키보드를 내릴 길이 없다
+          returnKeyType="done"
+          submitBehavior="blurAndSubmit"
           style={{
             ...theme.typography.body,
             color: theme.colors.text,
@@ -134,14 +159,15 @@ export default function ChooseCharacter() {
       */}
       <Card>
         <Text variant="heading" style={{ marginBottom: theme.spacing.xs }}>
-          상대를 뭐라고 부를까요
+          상대를 뭐라고 부를까요 · 안 적어도 돼요
         </Text>
         <Text
           variant="caption"
           color="textMuted"
           style={{ marginBottom: theme.spacing.sm }}
         >
-          이어지기 전까지 내 화면에만 보여요. 상대에게는 안 보입니다.
+          이어지기 전까지만 쓰는 말이에요. 이어지면 상대가 정한 이름으로 바뀌고,
+          상대에게는 안 보입니다.
         </Text>
 
         <View
@@ -185,6 +211,9 @@ export default function ChooseCharacter() {
           placeholderTextColor={theme.colors.textFaint}
           maxLength={20}
           autoCorrect={false}
+          // 키보드에 완료를 띄운다. 이게 없으면 키보드를 내릴 길이 없다
+          returnKeyType="done"
+          submitBehavior="blurAndSubmit"
           style={{
             ...theme.typography.body,
             color: theme.colors.text,

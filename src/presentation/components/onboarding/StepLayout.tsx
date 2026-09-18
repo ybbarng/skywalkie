@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ScrollView, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useTheme } from '../../theme/ThemeProvider'
 import { Button } from '../Button'
@@ -42,8 +42,24 @@ export function StepLayout({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
-      <View style={{ flex: 1 }}>
+      {/*
+        **키보드가 "다음" 버튼을 덮으면 갇힌다.**
+
+        버튼이 화면 맨 아래 고정이라, 이름을 치는 순간 키보드가 올라와
+        그 위를 덮는다. 스크롤해도 안 내려가고 키보드에 완료 버튼도 없으면
+        빠져나갈 길이 없다. **첫 화면에서 이러면 연결 자체를 못 한다.**
+
+        그래서 세 가지를 같이 건다. 버튼을 키보드 위로 밀어 올리고,
+        화면을 쓸어내리면 키보드가 내려가고, 눌린 곳이 버튼이면 키보드를
+        닫지 않고 바로 눌린다.
+      */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={{
             paddingHorizontal: theme.spacing.xl,
             paddingTop: theme.spacing.lg,
@@ -81,7 +97,7 @@ export function StepLayout({
             <Button label={secondaryLabel} tone="ghost" fullWidth onPress={onSecondary} />
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }

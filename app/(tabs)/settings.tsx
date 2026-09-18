@@ -31,6 +31,7 @@ export default function Settings() {
         <Text variant="title">설정</Text>
 
         <ConnectionSection />
+        <NameSection />
         <AppearanceSection />
         <AlertSection />
         <FlightSection />
@@ -68,6 +69,101 @@ function ConnectionSection() {
         }}
       />
     </Section>
+  )
+}
+
+/**
+ * 이름 고치기.
+ *
+ * **처음 안내에서만 정할 수 있었다.** 그런데 이 이름은 상대 화면에 계속
+ * 떠 있는 값이라, 오타가 나면 비행 내내 그대로 간다. 고칠 자리가 있어야 한다.
+ *
+ * 고친 이름은 다음 인사 때 상대에게 간다. 이미 이어져 있으면 끊었다
+ * 붙을 때 반영된다. 그때까지는 상대 화면에 예전 이름이 남는다.
+ */
+function NameSection() {
+  const profile = useSetupStore(s => s.profile)
+  const setDisplayName = useSetupStore(s => s.setDisplayName)
+  const setPeerNickname = useSetupStore(s => s.setPeerNickname)
+
+  const [name, setName] = useState(profile?.displayName ?? '')
+  const [calling, setCalling] = useState(profile?.peerNickname ?? '')
+
+  return (
+    <Section title="이름">
+      <NameField
+        label="상대에게 보일 내 이름"
+        hint="비워두면 예전 이름이 그대로 남아요."
+        value={name}
+        onChange={setName}
+        onDone={() => {
+          const trimmed = name.trim()
+          // **빈 이름으로 덮어쓰지 않는다.** 상대 화면에서 내가
+          // 이름 없는 사람이 되어버린다.
+          if (trimmed.length === 0) {
+            setName(profile?.displayName ?? '')
+            return
+          }
+          void setDisplayName(trimmed)
+        }}
+      />
+
+      <NameField
+        label="상대를 뭐라고 부를까"
+        hint="내 화면에서 이어지기 전까지만 쓰는 말이에요. 비워둬도 돼요."
+        value={calling}
+        onChange={setCalling}
+        onDone={() => void setPeerNickname(calling)}
+      />
+    </Section>
+  )
+}
+
+function NameField({
+  label,
+  hint,
+  value,
+  onChange,
+  onDone,
+}: {
+  label: string
+  hint: string
+  value: string
+  onChange: (next: string) => void
+  onDone: () => void
+}) {
+  const theme = useTheme()
+
+  return (
+    <View style={{ gap: theme.spacing.xs }}>
+      <Text variant="label">{label}</Text>
+
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        // 다 치고 다른 곳을 눌러도 저장돼야 한다. 저장 버튼을 따로
+        // 두면 안 누르고 나가는 사람이 반드시 생긴다.
+        onBlur={onDone}
+        onSubmitEditing={onDone}
+        maxLength={20}
+        autoCorrect={false}
+        returnKeyType="done"
+        style={{
+          ...theme.typography.body,
+          color: theme.colors.text,
+          backgroundColor: theme.colors.bg,
+          borderRadius: theme.radius.md,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: theme.spacing.md,
+        }}
+      />
+
+      <Text variant="caption" color="textMuted">
+        {hint}
+      </Text>
+    </View>
   )
 }
 

@@ -11,6 +11,7 @@ import {
   preferencesSchema,
   profileSchema,
 } from './settingsSchema'
+import { valueAtMost, waitAtMost } from './waitAtMost'
 
 /**
  * 기기에 남겨두는 설정.
@@ -69,17 +70,20 @@ export const settings = {
   },
 }
 
+/**
+ * 읽어본다. **못 읽어도 멈추지 않는다.**
+ *
+ * 저장소가 예외를 던질 수도 있고 **영영 답을 안 할 수도 있다.** 뒤엣것이
+ * 더 나쁘다. 기다리는 화면이 그대로 멎고 오류조차 안 뜬다.
+ * (`waitAtMost.ts` 에 그때 겪은 일을 적어뒀다)
+ *
+ * 둘 다 "값이 없다" 로 본다. 없으면 기본값으로 시작하면 된다.
+ */
 async function read<T>(
   key: string,
   schema: z.ZodType<T>,
 ): Promise<Result<T | null, DomainError>> {
-  let raw: string | null
-  try {
-    raw = await Storage.getItem(key)
-  } catch {
-    // 저장소를 못 읽는다. 값이 없는 것으로 보고 넘어간다.
-    return ok(null)
-  }
+  const raw = await valueAtMost<string | null>(Storage.getItem(key), null)
 
   if (raw === null) return ok(null)
 
@@ -93,11 +97,15 @@ async function read<T>(
   }
 }
 
+/**
+ * 남겨둔다. **못 남겨도 멈추지 않는다.**
+ *
+ * 저장에 실패해도 화면은 이미 바뀌었다. 다음에 켤 때 기억을 못 할 뿐이다.
+ * **설정 한 줄을 잃는 것이 앱을 못 쓰는 것보다 훨씬 낫다.**
+ *
+ * 대화 메시지는 여기로 안 온다. 그쪽은 잃으면 안 되므로 다른 길을 쓴다.
+ */
 async function write<T>(key: string, value: T): Promise<Result<void, DomainError>> {
-  try {
-    await Storage.setItem(key, JSON.stringify(value))
-  } catch {
-    // 저장에 실패해도 화면은 이미 바뀌었다. 다음에 켤 때 기억을 못 할 뿐이다.
-  }
+  await waitAtMost(Storage.setItem(key, JSON.stringify(value)))
   return ok(undefined)
 }

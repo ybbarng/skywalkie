@@ -13,12 +13,47 @@ export default defineConfig({
       '@test': fileURLToPath(new URL('./test', import.meta.url)),
       '@ble': fileURLToPath(new URL('./modules/ble-peripheral/src', import.meta.url)),
       '@stayalive': fileURLToPath(new URL('./modules/stay-alive/src', import.meta.url)),
+
+      /*
+        화면을 시험하려면 네이티브 라이브러리를 흉내 내야 한다.
+
+        `react-native` 은 Flow 로 적혀 있고 나머지는 네이티브 코드라
+        vitest 가 그대로는 못 읽는다. **색과 여백은 어차피 못 보지만,
+        누를 수 있는가·잠겼는가·글자가 들어가는가는 여기서 잡힌다.**
+
+        이걸 안 해둔 탓에 "다음 버튼이 안 눌린다" 같은 것을 폰에 깔아본
+        뒤에야 알았다. (docs/09-testing.md)
+      */
+      'react-native-safe-area-context': fileURLToPath(
+        new URL('./test/support/nativeShims.tsx', import.meta.url),
+      ),
+      'react-native-reanimated': fileURLToPath(
+        new URL('./test/support/reanimated.tsx', import.meta.url),
+      ),
+      'react-native-svg': fileURLToPath(
+        new URL('./test/support/nativeShims.tsx', import.meta.url),
+      ),
+      'react-native': fileURLToPath(
+        new URL('./test/support/reactNative.tsx', import.meta.url),
+      ),
     },
   },
+  // React Native 코드가 이 값을 곧바로 읽는다. 없으면 들여오는 순간 터진다.
+  define: {
+    __DEV__: 'false',
+  },
+
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
+    // 화면을 시험하려면 네이티브가 넣어주는 값들을 대신 채워둬야 한다
+    setupFiles: ['./test/support/setup.ts'],
+    include: [
+      'src/**/*.test.ts',
+      'src/**/*.test.tsx',
+      'test/**/*.test.ts',
+      'test/**/*.test.tsx',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
