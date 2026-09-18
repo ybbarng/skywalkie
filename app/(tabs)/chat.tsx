@@ -33,6 +33,7 @@ import { useLinkNotifications } from '@/presentation/hooks/useLinkNotifications'
 import { useMessageNotifications } from '@/presentation/hooks/useMessageNotifications'
 import { useNetworkWatch } from '@/presentation/hooks/useNetworkWatch'
 import { useReconnectOnForeground } from '@/presentation/hooks/useReconnectOnForeground'
+import { useStayAlive } from '@/presentation/hooks/useStayAlive'
 import { useWebFallback } from '@/presentation/hooks/useWebFallback'
 import { decidePhase, onOurNetwork } from '@/presentation/stores/connectPhase'
 import { useCallStore } from '@/presentation/stores/useCallStore'
@@ -196,6 +197,13 @@ export default function Chat() {
     everConnected,
     peerName: peerName(peer, profile?.peerNickname),
   })
+
+  // 뒤로 가도 연결을 지킨다. 안드로이드만.
+  //
+  // **앱이 뒤로 가면 RN 이 JS 타이머를 통째로 끈다.** 심장박동이
+  // 멎어서 상대가 15초 뒤 끊겼다고 본다. 전경 서비스 안에서 헤드리스
+  // 작업을 띄워두면 타이머가 살아 있다. 아이폰에는 이런 길이 없다.
+  useStayAlive(ready)
 
   // 앱이 잠든 뒤에도 알리는 유일한 길.
   //

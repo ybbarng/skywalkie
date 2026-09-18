@@ -19,7 +19,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@test/*": ["./test/*"],
-      "@ble/*": ["./modules/ble-peripheral/src/*"]
+      "@ble/*": ["./modules/ble-peripheral/src/*"],
+      "@stayalive/*": ["./modules/stay-alive/src/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],

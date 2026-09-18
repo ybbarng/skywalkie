@@ -12,6 +12,7 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@test': fileURLToPath(new URL('./test', import.meta.url)),
       '@ble': fileURLToPath(new URL('./modules/ble-peripheral/src', import.meta.url)),
+      '@stayalive': fileURLToPath(new URL('./modules/stay-alive/src', import.meta.url)),
     },
   },
   test: {

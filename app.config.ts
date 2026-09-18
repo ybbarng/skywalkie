@@ -60,6 +60,9 @@ const config: ExpoConfig = {
       'android.permission.FOREGROUND_SERVICE',
       'android.permission.FOREGROUND_SERVICE_MICROPHONE',
       'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+      // 뒤로 가도 연결을 지키는 서비스. 하는 일이 "곁에 있는 다른
+      // 기기와 주고받기" 라 이 갈래를 쓴다. (modules/stay-alive)
+      'android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE',
       'android.permission.WAKE_LOCK',
     ],
   },

@@ -112,6 +112,45 @@ export async function startWebChat(
 }
 
 /**
+ * 뒤로 가도 연결을 지킨다. 안드로이드만.
+ *
+ * **앱이 뒤로 가면 RN 이 JS 타이머를 통째로 끈다.** 심장박동이 멎고
+ * 상대가 15초 뒤 끊겼다고 본다. 전경 서비스 안에서 헤드리스 작업을
+ * 하나 띄워두면 타이머가 살아 있다.
+ *
+ * 없으면 아무 일도 안 한다. 아이폰에는 이 모듈이 아예 없다.
+ * (modules/stay-alive · docs/04-transport-spec.md 2.7)
+ */
+export const stayAlive = {
+  available(): boolean {
+    try {
+      const module = require('../../modules/stay-alive/src/index')
+      return module.canStayAlive() === true
+    } catch {
+      return false
+    }
+  },
+
+  start(): boolean {
+    try {
+      const module = require('../../modules/stay-alive/src/index')
+      return module.startStayAlive() === true
+    } catch {
+      return false
+    }
+  },
+
+  stop(): void {
+    try {
+      const module = require('../../modules/stay-alive/src/index')
+      module.stopStayAlive()
+    } catch {
+      // 못 껐다. 서비스가 남아도 알림 하나가 더 떠 있을 뿐이다.
+    }
+  },
+}
+
+/**
  * 지금 배터리가 얼마나 남았나.
  *
  * **비행기에서 폰이 죽으면 대화가 끝난다.** 미리 알면 보조 배터리를

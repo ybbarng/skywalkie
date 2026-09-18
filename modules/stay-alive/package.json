@@ -1,0 +1,7 @@
+{
+  "name": "stay-alive",
+  "version": "1.0.0",
+  "description": "안드로이드가 뒤로 가도 연결을 지킨다",
+  "main": "src/index.ts",
+  "private": true
+}
