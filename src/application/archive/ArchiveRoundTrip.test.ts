@@ -353,6 +353,68 @@ describe('망가진 파일은', () => {
     expect(result.ok).toBe(true)
   })
 
+  describe('그래도 불러오겠다고 하면', () => {
+    it('건질 수 있는 만큼 건진다', async () => {
+      // **거절만 하면 그 파일이 하나뿐일 때 통째로 잃는다.**
+      // 망가졌다고 알린 다음, 그래도 열겠다면 열어준다.
+      const file = JSON.parse(await goodFile())
+      file.integrity.checksum = 'sha256:엉뚱한값'
+
+      const repository = new FakeConversationRepository()
+      const salvage = new ImportConversation({ repository, hasher: realHasher })
+      const result = await salvage.fromJson(JSON.stringify(file), {
+        ignoreDamage: true,
+      })
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.inserted).toBe(6)
+      // 무엇이 어긋났는지는 그대로 알려준다. 멀쩡했던 척하지 않는다.
+      expect(result.value.damage).not.toBeNull()
+    })
+
+    it('못 읽은 건수를 알려준다', async () => {
+      // 읽을 수 없는 한 건 때문에 나머지를 버리지 않는다
+      const file = JSON.parse(await goodFile())
+      file.messages[2].seq = 0
+      file.messages[4].sentAt = '어제'
+
+      const repository = new FakeConversationRepository()
+      const salvage = new ImportConversation({ repository, hasher: realHasher })
+      const result = await salvage.fromJson(JSON.stringify(file), {
+        ignoreDamage: true,
+      })
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.inserted).toBe(4)
+      expect(result.value.unreadable).toBe(2)
+    })
+
+    it('멀쩡한 파일이면 못 읽은 것이 없다', async () => {
+      const repository = new FakeConversationRepository()
+      const normal = new ImportConversation({ repository, hasher: realHasher })
+      const result = await normal.fromJson(await goodFile())
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.unreadable).toBe(0)
+      expect(result.value.damage).toBeNull()
+    })
+
+    it('뜯지도 못하는 파일은 그래도 안 된다', async () => {
+      // 건질 것이 없다. 억지로 넘어가도 할 수 있는 게 없다.
+      const salvage = new ImportConversation({
+        repository: new FakeConversationRepository(),
+        hasher: realHasher,
+      })
+
+      const result = await salvage.fromJson('그냥 글', { ignoreDamage: true })
+
+      expect(result.ok).toBe(false)
+    })
+  })
+
   it('다른 앱이 만든 JSON 은 거절한다', async () => {
     const result = await importer.fromJson('{"messages":[],"version":1}')
 

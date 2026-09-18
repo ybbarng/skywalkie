@@ -5,7 +5,7 @@ import { ok, type Result } from '@/domain/shared/Result'
 import type { ConversationRepository } from '../ports/ConversationRepository'
 import type { Hasher } from '../ports/FileStore'
 import {
-  ARCHIVE_MARK,
+  ARCHIVE_FORMAT,
   ARCHIVE_VERSION,
   type ArchivedMessage,
   type ArchivedPerson,
@@ -67,7 +67,7 @@ export class ExportConversation {
     const total = await this.deps.repository.count()
     const expected = total.ok ? total.value : 0
 
-    yield `{"mark":${JSON.stringify(ARCHIVE_MARK)},`
+    yield `{"format":${JSON.stringify(ARCHIVE_FORMAT)},`
     yield `"version":${ARCHIVE_VERSION},`
     yield `"exportedAt":${this.deps.clock.now().getTime()},`
     yield `"people":${JSON.stringify(input.people)},`

@@ -7,7 +7,7 @@ import { err, ok, type Result } from '@/domain/shared/Result'
 import type { ConversationRepository } from '../ports/ConversationRepository'
 import type { Hasher } from '../ports/FileStore'
 import {
-  ARCHIVE_MARK,
+  ARCHIVE_FORMAT,
   ARCHIVE_VERSION,
   type ArchivedMessage,
   type ArchivedPerson,
@@ -37,15 +37,38 @@ export interface ImportOutcome {
   readonly inserted: number
   /** 이미 있어서 건너뛴 것 */
   readonly skipped: number
+  /** 아예 읽지 못한 것. 망가진 파일을 억지로 열었을 때만 0 이 아니다 */
+  readonly unreadable: number
+  /** 어디가 어긋났는지. 멀쩡했으면 null */
+  readonly damage: DomainError | null
   /** 파일에 함께 들어 있던 사람들. 프로필을 덮어쓸지는 화면이 물어본다 */
   readonly people: readonly ArchivedPerson[]
+}
+
+export interface ImportOptions {
+  /**
+   * 망가진 파일이어도 건질 수 있는 만큼 건진다.
+   *
+   * **기본은 거절이다.** 하지만 그 파일이 하나뿐이면 거절은 곧
+   * 통째로 잃는 것이다. 그래서 화면이 "그래도 불러올까요?" 를 묻고,
+   * 사용자가 그러겠다고 하면 이 길로 온다.
+   * (05-messaging-spec.md 6.3)
+   *
+   * 이때도 **읽을 수 없는 한 건 때문에 나머지를 버리지는 않는다.**
+   * 되살릴 수 있는 것만 넣고 몇 건을 못 읽었는지 알려준다.
+   */
+  readonly ignoreDamage?: boolean
 }
 
 export class ImportConversation {
   constructor(private readonly deps: ImportDeps) {}
 
-  async fromJson(raw: string): Promise<Result<ImportOutcome, DomainError>> {
+  async fromJson(
+    raw: string,
+    options: ImportOptions = {},
+  ): Promise<Result<ImportOutcome, DomainError>> {
     const parsed = parseArchive(raw)
+    // 뜯지도 못하면 건질 것이 없다. 억지로 넘어가도 할 수 있는 게 없다.
     if (!parsed.ok) return parsed
 
     const file = parsed.value
@@ -59,14 +82,24 @@ export class ImportConversation {
     if (!actual.ok) return actual
 
     const matches = compareIntegrity(file.integrity, actual.value)
-    if (!matches.ok) return matches
+    const damage = matches.ok ? null : matches.error
+    if (damage !== null && options.ignoreDamage !== true) return err(damage)
 
     // 전부 도메인 값으로 바꿔본 뒤에 넣는다.
-    // 하나라도 이상하면 하나도 넣지 않는다.
     const messages: Message[] = []
+    let unreadable = 0
+
     for (const [index, archived] of file.messages.entries()) {
       const restored = restore(archived, index)
-      if (!restored.ok) return restored
+
+      if (!restored.ok) {
+        // 멀쩡한 파일이면 한 건이라도 이상할 때 하나도 넣지 않는다.
+        // 반쯤 넣고 알려주면 이미 늦다.
+        if (options.ignoreDamage !== true) return restored
+        unreadable += 1
+        continue
+      }
+
       messages.push(restored.value)
     }
 
@@ -76,6 +109,8 @@ export class ImportConversation {
     return ok({
       inserted: saved.value.inserted,
       skipped: saved.value.skipped,
+      unreadable,
+      damage,
       people: file.people,
     })
   }
@@ -114,7 +149,7 @@ export function parseArchive(raw: string): Result<ParsedArchive, DomainError> {
 
   const file = value as Record<string, unknown>
 
-  if (file.mark !== ARCHIVE_MARK) {
+  if (file.format !== ARCHIVE_FORMAT) {
     return err(
       domainError('invalid-value', '스카이워키가 만든 대화 파일이 아니에요', 'archive'),
     )

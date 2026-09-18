@@ -49,6 +49,7 @@
     "react-native-svg": "15.15.4",
     "react-native-tcp-socket": "^6.4.3",
     "react-native-udp": "^4.1.7",
+    "react-native-webrtc": "^124.0.8",
     "ulid": "^3.0.2",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"

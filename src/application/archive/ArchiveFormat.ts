@@ -17,11 +17,11 @@ import type { MessageContent } from '@/domain/message/MessageContent'
 /** 형식이 바뀌면 올린다. 읽는 쪽이 이걸 보고 다룰 수 있는지 판단한다 */
 export const ARCHIVE_VERSION = 1
 
-/** 다른 앱이 만든 JSON 을 거르는 표시 */
-export const ARCHIVE_MARK = 'skywalkie.conversation'
+/** 다른 앱이 만든 JSON 을 거르는 표시 (05-messaging-spec.md 6.2) */
+export const ARCHIVE_FORMAT = 'skywalkie-archive'
 
 export interface ArchiveFile {
-  readonly mark: typeof ARCHIVE_MARK
+  readonly format: typeof ARCHIVE_FORMAT
   readonly version: number
   /** 꺼낸 시각 */
   readonly exportedAt: number
