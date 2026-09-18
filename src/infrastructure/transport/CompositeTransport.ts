@@ -54,23 +54,73 @@ export class CompositeTransport implements MessageTransport {
     return this.active?.kind ?? this.candidates[0]?.kind ?? 'wifi'
   }
 
+  /**
+   * 모든 길을 **같이 연다.**
+   *
+   * 전에는 순서대로 하나씩 해보고 먼저 되는 것에서 멈췄다. 그런데
+   * **Wi-Fi 는 여는 쪽에서 늘 성공한다.** 상대가 없어도 서버를 띄우는
+   * 것만으로 되기 때문이다. 그래서 블루투스는 시도조차 안 됐다.
+   *
+   * 비행기에서는 Wi-Fi 가 안 되므로 그 상태로 영영 안 이어진다.
+   * 실제로 두 폰이 서로 못 찾았다.
+   *
+   * 그래서 열 수 있는 것은 다 열어두고 **먼저 진짜로 이어지는 쪽**을
+   * 쓴다. "열렸다" 와 "이어졌다" 는 다르다.
+   */
   async connect(): Promise<Result<void, DomainError>> {
     return this.queue.run(async () => {
       const searching = this.state.startSearching()
       if (searching.ok) this.setState(searching.value)
 
-      // 우선순위대로 시도한다. 하나 되면 멈춘다.
-      for (const candidate of this.candidates) {
-        const opened = await candidate.connect()
-        if (!opened.ok) continue
+      const opened: MessageTransport[] = []
 
-        this.adopt(candidate)
-        await this.drainOutbox()
-        return ok(undefined)
+      for (const candidate of this.candidates) {
+        const result = await candidate.connect()
+        if (result.ok) opened.push(candidate)
       }
 
-      return err(domainError('not-found', '열 수 있는 길이 없다', 'transport'))
+      if (opened.length === 0) {
+        return err(domainError('not-found', '열 수 있는 길이 없다', 'transport'))
+      }
+
+      // 이미 이어진 것이 있으면 그것을, 없으면 가장 나은 것을 쓴다.
+      // 나머지도 열린 채로 둔다. 그쪽이 먼저 이어지면 그때 갈아탄다.
+      const live = opened.find(one => one.currentState().isUsable())
+      const chosen = live ?? opened[0]
+      if (chosen === undefined) {
+        return err(domainError('not-found', '열 수 있는 길이 없다', 'transport'))
+      }
+
+      for (const one of opened) this.watch(one)
+      this.adopt(chosen)
+
+      await this.drainOutbox()
+      return ok(undefined)
     })
+  }
+
+  /**
+   * 아직 안 고른 길도 지켜본다.
+   *
+   * 골라둔 길이 아직 안 이어졌는데 **다른 길이 먼저 이어지면 그리로
+   * 옮긴다.** 비행기에서는 Wi-Fi 가 영영 안 이어지므로 이 갈아타기가
+   * 곧 유일한 길이 된다.
+   */
+  private watch(candidate: MessageTransport): void {
+    if (this.subscriptions.has(candidate)) return
+
+    const off = candidate.onStateChange(state => {
+      if (!state.isUsable()) return
+      if (this.active === candidate) return
+      // 이미 이어져 있는 길이 있으면 굳이 옮기지 않는다
+      if (this.active?.currentState().isUsable() === true) return
+
+      this.unsubscribe(candidate)
+      this.adopt(candidate)
+      void this.drainOutbox()
+    })
+
+    this.subscriptions.set(candidate, [off])
   }
 
   async disconnect(): Promise<void> {

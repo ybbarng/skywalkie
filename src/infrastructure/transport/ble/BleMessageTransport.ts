@@ -214,6 +214,11 @@ export class BleMessageTransport implements MessageTransport {
 
   /** 알리는 쪽을 맡는다. 상대가 찾아오기를 기다린다 */
   private async advertise(): Promise<Result<void, DomainError>> {
+    // **묻는 것이 먼저다.** 알리기도 찾기와 똑같이 권한이 있어야 한다.
+    // 없으면 예외도 안 나고 그냥 아무도 우리를 못 본다.
+    const allowed = await askForBluetooth()
+    if (!allowed.ok) return allowed
+
     const peripheral = loadBlePeripheral()
     if (!peripheral.available) {
       return err(domainError('not-found', peripheral.why, 'ble'))
