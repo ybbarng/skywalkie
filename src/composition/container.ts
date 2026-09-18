@@ -7,6 +7,7 @@ import type {
 import type { ConversationRepository } from '@/application/ports/ConversationRepository'
 import type { MessageTransport } from '@/application/ports/MessageTransport'
 import type { AudioSession, VoiceLink } from '@/application/ports/VoiceLink'
+import type { VoicePlayer, VoiceRecorder } from '@/application/ports/VoiceMemo'
 import type { DomainError } from '@/domain/shared/DomainError'
 import { err, ok, type Result } from '@/domain/shared/Result'
 import {
@@ -23,6 +24,7 @@ import { BleMessageTransport } from '@/infrastructure/transport/ble/BleMessageTr
 import { CompositeTransport } from '@/infrastructure/transport/CompositeTransport'
 import type { ConnectionRole } from '@/infrastructure/transport/wifi/DiscoveryPlan'
 import { WifiLink } from '@/infrastructure/transport/wifi/WifiLink'
+import { ExpoVoicePlayer, ExpoVoiceRecorder } from '@/infrastructure/voice/ExpoVoiceMemo'
 
 /**
  * 어떤 구현을 끼울지 정하는 유일한 곳.
@@ -48,6 +50,9 @@ export interface Container {
   readonly assets: AssetStore
   readonly picker: ImagePicker
   readonly resizer: ImageResizer
+  /** 목소리를 녹음하고 듣는다. 모듈이 없으면 isAvailable 이 false 다 */
+  readonly recorder: VoiceRecorder
+  readonly voicePlayer: VoicePlayer
   dispose(): Promise<void>
 }
 
@@ -103,6 +108,8 @@ export async function createContainer(
     assets: new ExpoAssetStore(),
     picker: new ExpoImagePicker(),
     resizer: new ExpoImageResizer(),
+    recorder: new ExpoVoiceRecorder(),
+    voicePlayer: new ExpoVoicePlayer(),
     async dispose() {
       await voice.close()
       await audio.deactivate()

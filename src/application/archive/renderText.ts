@@ -41,6 +41,8 @@ export function describe(message: ArchivedMessage): string {
       return `(${poseWord(content.pose)})`
     case 'photo':
       return content.caption === undefined ? '(사진)' : `(사진) ${content.caption}`
+    case 'voice':
+      return `(음성 ${Math.round(content.durationMs / 1000)}초)`
     case 'nudge':
       return '(콕 찔렀어요)'
     case 'system':

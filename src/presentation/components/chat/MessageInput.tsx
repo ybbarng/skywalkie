@@ -16,6 +16,12 @@ interface MessageInputProps {
   onPhoto?(): void
   /** 길게 누르면 카메라를 연다. 지금 찍어 보낼 때 */
   onCamera?(): void
+  /** 꾹 누르는 동안 녹음한다 */
+  onRecordStart?(): void
+  onRecordStop?(): void
+  onRecordCancel?(): void
+  /** 지금 녹음 중인가 */
+  recording?: boolean
   /** 끊겨 있으면 알려준다. 입력을 막지는 않는다 */
   offline?: boolean
 }
@@ -34,6 +40,10 @@ export function MessageInput({
   onStickers,
   onPhoto,
   onCamera,
+  onRecordStart,
+  onRecordStop,
+  onRecordCancel,
+  recording = false,
   offline = false,
 }: MessageInputProps) {
   const theme = useTheme()
@@ -60,6 +70,18 @@ export function MessageInput({
         gap: theme.spacing.xs,
       }}
     >
+      {recording && (
+        <Pressable
+          onPress={onRecordCancel}
+          accessibilityRole="button"
+          style={{ paddingHorizontal: theme.spacing.sm }}
+        >
+          <Text variant="caption" color="danger">
+            녹음 중… 손을 떼면 보내져요. 여기를 누르면 버려요.
+          </Text>
+        </Pressable>
+      )}
+
       {offline && (
         <Text
           variant="caption"
@@ -111,23 +133,55 @@ export function MessageInput({
           }}
         />
 
-        <Pressable
-          onPress={submit}
-          disabled={!canSend}
-          accessibilityRole="button"
-          accessibilityLabel="보내기"
-          style={{
-            width: theme.minTouchSize,
-            height: theme.minTouchSize,
-            borderRadius: theme.minTouchSize / 2,
-            backgroundColor: canSend ? theme.colors.me : theme.colors.surfaceRaised,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: canSend ? 1 : 0.5,
-          }}
-        >
-          <Icon name="send" size={20} color={canSend ? 'meText' : 'textFaint'} />
-        </Pressable>
+        {/*
+          **쓸 글이 있으면 보내기, 없으면 마이크.**
+
+          자리를 하나만 쓰는 이유는 좁아서다. 글을 쓰다 말고 녹음할
+          일은 없으니 둘이 겹쳐도 헷갈리지 않는다.
+
+          녹음은 **꾹 누르는 동안만** 된다. 손을 떼면 바로 나간다.
+          눌러서 켜고 다시 눌러 끄는 방식은 켜둔 줄 모르고 있다가
+          엉뚱한 소리가 통째로 건너간다.
+        */}
+        {canSend || onRecordStart === undefined ? (
+          <Pressable
+            onPress={submit}
+            disabled={!canSend}
+            accessibilityRole="button"
+            accessibilityLabel="보내기"
+            style={{
+              width: theme.minTouchSize,
+              height: theme.minTouchSize,
+              borderRadius: theme.minTouchSize / 2,
+              backgroundColor: canSend ? theme.colors.me : theme.colors.surfaceRaised,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: canSend ? 1 : 0.5,
+            }}
+          >
+            <Icon name="send" size={20} color={canSend ? 'meText' : 'textFaint'} />
+          </Pressable>
+        ) : (
+          <Pressable
+            onPressIn={onRecordStart}
+            onPressOut={onRecordStop}
+            accessibilityRole="button"
+            accessibilityLabel="음성 메시지"
+            accessibilityHint="꾹 누르고 말한 뒤 손을 떼면 보내져요"
+            style={{
+              width: theme.minTouchSize,
+              height: theme.minTouchSize,
+              borderRadius: theme.minTouchSize / 2,
+              backgroundColor: recording
+                ? theme.colors.danger
+                : theme.colors.surfaceRaised,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Icon name="mic" size={20} color={recording ? 'onStatus' : 'textMuted'} />
+          </Pressable>
+        )}
       </View>
     </View>
   )

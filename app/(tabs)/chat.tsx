@@ -69,6 +69,13 @@ export default function Chat() {
   const sendNudgeToPeer = useChatStore(s => s.sendNudge)
   const sendSticker = useChatStore(s => s.sendSticker)
   const sendPhoto = useChatStore(s => s.sendPhoto)
+  const recording = useChatStore(s => s.recording)
+  const startRecording = useChatStore(s => s.startRecording)
+  const stopRecordingAndSend = useChatStore(s => s.stopRecordingAndSend)
+  const cancelRecording = useChatStore(s => s.cancelRecording)
+  const playingVoice = useChatStore(s => s.playingVoice)
+  const playVoice = useChatStore(s => s.playVoice)
+  const stopVoice = useChatStore(s => s.stopVoice)
   const shareBattery = useChatStore(s => s.shareBattery)
   const peerBattery = useChatStore(s => s.peerBattery)
   const assetPaths = useChatStore(s => s.assetPaths)
@@ -109,6 +116,8 @@ export default function Chat() {
         assets: container.value.assets,
         picker: container.value.picker,
         resizer: container.value.resizer,
+        recorder: container.value.recorder,
+        voicePlayer: container.value.voicePlayer,
         profile: {
           displayName: profile.displayName,
           character: profile.character,
@@ -258,8 +267,11 @@ export default function Chat() {
       const showDate =
         previous === undefined || !isSameDay(previous.orderedAt(), item.orderedAt())
 
-      // 사진이면 어디까지 왔는지 같이 넘긴다
-      const assetId = item.content.kind === 'photo' ? item.content.assetId : null
+      // 사진과 음성이면 어디까지 왔는지 같이 넘긴다
+      const assetId =
+        item.content.kind === 'photo' || item.content.kind === 'voice'
+          ? item.content.assetId
+          : null
 
       return (
         <>
@@ -271,11 +283,14 @@ export default function Chat() {
             showTime={showTime}
             assetPath={assetId === null ? null : (assetPaths[assetId] ?? null)}
             assetProgress={assetId === null ? null : (assetProgress[assetId] ?? null)}
+            playingVoice={assetId !== null && playingVoice === assetId}
+            onPlayVoice={id => void playVoice(id)}
+            onStopVoice={() => void stopVoice()}
           />
         </>
       )
     },
-    [me, messages, assetPaths, assetProgress],
+    [me, messages, assetPaths, assetProgress, playingVoice, playVoice, stopVoice],
   )
 
   if (profile === null || me === null) {
@@ -373,6 +388,11 @@ export default function Chat() {
           // 기내식이나 창밖을 바로 찍어 보낼 때가 있다.
           onPhoto={() => void sendPhoto('library')}
           onCamera={() => void sendPhoto('camera')}
+          // 꾹 누르는 동안 녹음하고 손을 떼면 보낸다
+          onRecordStart={() => void startRecording()}
+          onRecordStop={() => void stopRecordingAndSend()}
+          onRecordCancel={() => void cancelRecording()}
+          recording={recording}
           onDoodle={() => router.push('/doodle')}
           offline={!connected}
         />

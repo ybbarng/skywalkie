@@ -68,6 +68,28 @@ export interface PhotoContent {
 }
 
 /**
+ * 음성 메시지.
+ *
+ * **떨어져 앉아도 목소리를 들려줄 수 있다.** 통화와 다른 점은 상대가
+ * 지금 듣고 있지 않아도 된다는 것이다. 자고 있으면 나중에 들으면 된다.
+ * 끊겨 있어도 보내둘 수 있고, 다시 붙으면 건너간다.
+ *
+ * 사진과 같은 길로 나른다. 바이트는 여기 담기지 않고 `assetId` 로
+ * 찾아간다.
+ *
+ * `durationMs` 를 같이 보내는 이유는 **파일이 도착하기 전에도 얼마나
+ * 긴 말인지 보여주기 위해서**다. 30초짜리인 줄 알면 기다릴 만하다.
+ */
+export interface VoiceContent {
+  readonly kind: 'voice'
+  /** 조각들을 이 번호로 찾는다 */
+  readonly assetId: string
+  /** 얼마나 긴 말인가 */
+  readonly durationMs: number
+  readonly byteLength: number
+}
+
+/**
  * 캐릭터 이모티콘.
  *
  * **그림을 나르지 않는다.** 어떤 캐릭터가 어떤 자세인지만 보내면
@@ -185,6 +207,7 @@ export type MessageContent =
   | DoodleContent
   | StickerContent
   | PhotoContent
+  | VoiceContent
   | NudgeContent
   | SystemContent
 
@@ -328,6 +351,40 @@ export function photoContent(input: {
   })
 }
 
+/** 한 번에 이만큼까지만 녹음한다 */
+export const MAX_VOICE_MS = 60_000
+
+export function voiceContent(input: {
+  assetId: string
+  durationMs: number
+  byteLength: number
+}): Result<VoiceContent, DomainError> {
+  if (input.assetId.length === 0) {
+    return err(domainError('empty', '음성 번호가 없다', 'voice'))
+  }
+
+  if (!isPositive(input.byteLength)) {
+    return err(domainError('invalid-value', '음성이 비어 있다', 'voice'))
+  }
+
+  // 너무 짧으면 손가락이 미끄러진 것이다. 빈 소리를 보내면 상대가
+  // 눌러보고 아무것도 안 들려 당황한다.
+  if (!isPositive(input.durationMs) || input.durationMs < 500) {
+    return err(domainError('invalid-value', '너무 짧다', 'voice'))
+  }
+
+  if (input.durationMs > MAX_VOICE_MS) {
+    return err(domainError('too-long', '음성이 너무 길다', 'voice'))
+  }
+
+  return ok({
+    kind: 'voice',
+    assetId: input.assetId,
+    durationMs: Math.round(input.durationMs),
+    byteLength: input.byteLength,
+  })
+}
+
 function isPositive(value: number): boolean {
   return Number.isFinite(value) && value > 0
 }
@@ -354,5 +411,7 @@ export function fitsNarrowLink(content: MessageContent): boolean {
   //
   // 사진은 메시지 자체는 작지만 뒤따라 오는 조각이 크다. 좁은 길에서는
   // 그 조각이 대화를 통째로 막으므로 Wi-Fi 가 열릴 때까지 기다린다.
-  return content.kind !== 'doodle' && content.kind !== 'photo'
+  //
+  // 음성도 마찬가지다. 몇십 킬로바이트라 좁은 길에서는 글을 막는다.
+  return content.kind !== 'doodle' && content.kind !== 'photo' && content.kind !== 'voice'
 }

@@ -57,6 +57,21 @@ const messageContent = z.discriminatedUnion('kind', [
     preview: z.string().max(4000).optional(),
     caption: z.string().max(200).optional(),
   }),
+  z.object({
+    kind: z.literal('voice'),
+    assetId: z.string().length(26),
+    // 한 번에 1분까지. 넉넉히 잡아 2분을 넘으면 버린다
+    durationMs: z
+      .number()
+      .int()
+      .positive()
+      .max(2 * 60_000),
+    byteLength: z
+      .number()
+      .int()
+      .positive()
+      .max(8 * 1024 * 1024),
+  }),
   z.object({ kind: z.literal('nudge') }),
   z.object({
     kind: z.literal('system'),

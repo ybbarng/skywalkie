@@ -11,6 +11,7 @@ import { Icon } from '../Icon'
 import { Text } from '../Text'
 import { DeliveryMark } from './DeliveryMark'
 import { PhotoBubble } from './PhotoBubble'
+import { VoiceBubble } from './VoiceBubble'
 
 interface MessageBubbleProps {
   message: Message
@@ -24,6 +25,10 @@ interface MessageBubbleProps {
   /** 시각을 보여줄지. 연달아 온 것 중 마지막에만 보여준다 */
   showTime: boolean
   onRetry?: () => void
+  /** 지금 이 음성을 듣고 있나 */
+  playingVoice?: boolean
+  onPlayVoice?: (assetId: string) => void
+  onStopVoice?: () => void
 }
 
 export function MessageBubble({
@@ -34,6 +39,9 @@ export function MessageBubble({
   onRetry,
   assetPath = null,
   assetProgress = null,
+  playingVoice = false,
+  onPlayVoice,
+  onStopVoice,
 }: MessageBubbleProps) {
   const theme = useTheme()
   const reducedMotion = useReducedMotion()
@@ -83,6 +91,9 @@ export function MessageBubble({
           textColor={textColor}
           assetPath={assetPath}
           assetProgress={assetProgress}
+          playingVoice={playingVoice}
+          {...(onPlayVoice === undefined ? {} : { onPlayVoice })}
+          {...(onStopVoice === undefined ? {} : { onStopVoice })}
         />
       </View>
 
@@ -113,12 +124,18 @@ function BubbleContent({
   textColor,
   assetPath,
   assetProgress,
+  playingVoice,
+  onPlayVoice,
+  onStopVoice,
 }: {
   message: Message
   me: PeerId
   textColor: string
   assetPath: string | null
   assetProgress: number | null
+  playingVoice: boolean
+  onPlayVoice?: (assetId: string) => void
+  onStopVoice?: () => void
 }) {
   const theme = useTheme()
 
@@ -144,6 +161,21 @@ function BubbleContent({
           size={120}
         />
       )
+
+    case 'voice': {
+      const assetId = message.content.assetId
+
+      return (
+        <VoiceBubble
+          content={message.content}
+          localPath={assetPath}
+          {...(assetProgress === null ? {} : { progress: assetProgress })}
+          playing={playingVoice}
+          onPlay={() => onPlayVoice?.(assetId)}
+          onStop={() => onStopVoice?.()}
+        />
+      )
+    }
 
     case 'photo':
       return (

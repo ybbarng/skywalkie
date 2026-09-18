@@ -72,6 +72,16 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     [
+      // 음성 메시지를 녹음하고 듣는다.
+      //
+      // **인터넷을 쓰지 않는다.** 기기 안에서 녹음해 파일로 만들고,
+      // 그 파일을 사진과 같은 길(조각내어 보내기)로 나른다.
+      'expo-audio',
+      {
+        microphonePermission: '음성 메시지를 녹음하려면 마이크가 필요해요.',
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         image: './assets/icon/generated/splash.png',

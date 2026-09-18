@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { ReceiveAsset } from '@/application/assets/ReceiveAsset'
 import { SendPhoto } from '@/application/assets/SendPhoto'
+import { SendVoice } from '@/application/assets/SendVoice'
 import { ConversationSync } from '@/application/messaging/ConversationSync'
 import { FlushPendingMessages } from '@/application/messaging/FlushPendingMessages'
 import { LoadConversation } from '@/application/messaging/LoadConversation'
@@ -17,6 +18,7 @@ import type { CallSignalPayload, Envelope } from '@/application/ports/Envelope'
 import { PROTOCOL_VERSION } from '@/application/ports/Envelope'
 import type { MessageTransport } from '@/application/ports/MessageTransport'
 import type { DiscoveryProgress } from '@/application/ports/PeerDiscovery'
+import type { VoicePlayer, VoiceRecorder } from '@/application/ports/VoiceMemo'
 import { SerialQueue } from '@/application/shared/SerialQueue'
 import { ids } from '@/composition/services'
 import type { ConnectionState } from '@/domain/connection/ConnectionState'
@@ -61,6 +63,10 @@ interface ChatState {
   assetPaths: Record<string, string>
   /** 사진을 보내는 중인가. 화면이 버튼을 잠글 때 쓴다 */
   sendingPhoto: boolean
+  /** 지금 녹음 중인가. 화면이 빨갛게 바뀐다 */
+  recording: boolean
+  /** 지금 듣고 있는 음성의 번호. 아무것도 아니면 null */
+  playingVoice: string | null
   /**
    * 상대 배터리. 0에서 1 사이, 모르면 null.
    *
@@ -95,6 +101,15 @@ interface ChatState {
   sendSticker(pose: StickerPose): Promise<void>
   /** 앨범에서 고르거나 찍어 보낸다 */
   sendPhoto(from: 'library' | 'camera', caption?: string): Promise<void>
+  /** 목소리를 녹음하기 시작한다. 이미 녹음 중이면 아무 일도 안 한다 */
+  startRecording(): Promise<void>
+  /** 녹음을 마치고 보낸다 */
+  stopRecordingAndSend(): Promise<void>
+  /** 녹음을 버린다. 보내지 않는다 */
+  cancelRecording(): Promise<void>
+  /** 음성 메시지를 듣는다. 이미 듣고 있던 것은 멈춘다 */
+  playVoice(assetId: string): Promise<void>
+  stopVoice(): Promise<void>
   /** 손으로 그린 낙서. 그림 파일이 아니라 선의 좌표로 간다 */
   sendDoodle(strokes: readonly Stroke[]): Promise<void>
   loadOlder(): Promise<void>
@@ -110,6 +125,8 @@ export interface ChatDeps {
   readonly assets: AssetStore
   readonly picker: ImagePicker
   readonly resizer: ImageResizer
+  readonly recorder: VoiceRecorder
+  readonly voicePlayer: VoicePlayer
   /** 인사할 때 상대에게 알려줄 내 정보 */
   readonly profile: {
     readonly displayName: string
@@ -361,6 +378,8 @@ export const useChatStore = create<ChatState>((set, get) => {
     assetProgress: {},
     assetPaths: {},
     sendingPhoto: false,
+    recording: false,
+    playingVoice: null,
     peerBattery: null,
     pendingCount: 0,
     peerId: null,
@@ -654,6 +673,94 @@ export const useChatStore = create<ChatState>((set, get) => {
       } finally {
         set({ sendingPhoto: false })
       }
+    },
+
+    async startRecording() {
+      const active = deps
+      if (active === null || get().recording) return
+
+      const started = await active.recorder.start()
+      if (started.ok) set({ recording: true })
+    },
+
+    async stopRecordingAndSend() {
+      const active = deps
+      if (active === null || !get().recording) return
+
+      set({ recording: false })
+
+      const recorded = await active.recorder.stop()
+      // 너무 짧거나 못 읽었다. 조용히 넘어간다.
+      if (!recorded.ok) return
+
+      const conversation = get().conversation
+      if (conversation === null) return
+
+      const sender = new SendVoice({
+        transport: active.transport,
+        repository: active.repository,
+        assets: active.assets,
+        clock: systemClock,
+        ids,
+      })
+
+      const result = await sender.execute({
+        author: active.me,
+        conversation,
+        base64: recorded.value.base64,
+        durationMs: recorded.value.durationMs,
+        byteLength: recorded.value.byteLength,
+        onProgress: (sent, total) => {
+          set({
+            assetProgress: {
+              ...get().assetProgress,
+              outgoing: total === 0 ? 1 : sent / total,
+            },
+          })
+        },
+      })
+
+      if (!result.ok) return
+
+      // 내가 보낸 것은 이미 기기에 있다. 바로 들을 수 있다.
+      const { outgoing: _sent, ...rest } = get().assetProgress
+      set({
+        conversation: result.value.conversation,
+        assetProgress: rest,
+        assetPaths: {
+          ...get().assetPaths,
+          [result.value.assetId]: active.assets.pathOf(result.value.assetId),
+        },
+      })
+      await refresh()
+    },
+
+    async cancelRecording() {
+      const active = deps
+      if (active === null) return
+
+      set({ recording: false })
+      await active.recorder.cancel()
+    },
+
+    async playVoice(assetId) {
+      const active = deps
+      if (active === null) return
+
+      const path = get().assetPaths[assetId]
+      // 아직 다 안 왔다. 조각이 도착하면 그때 들을 수 있다.
+      if (path === undefined) return
+
+      const played = await active.voicePlayer.play(path)
+      set({ playingVoice: played.ok ? assetId : null })
+    },
+
+    async stopVoice() {
+      const active = deps
+      if (active === null) return
+
+      await active.voicePlayer.stop()
+      set({ playingVoice: null })
     },
 
     async sendDoodle(strokes) {

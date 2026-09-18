@@ -25,6 +25,9 @@ export function notificationBody(content: MessageContent): string {
     case 'photo':
       return content.caption ?? '사진을 보냈어요'
 
+    case 'voice':
+      return `음성 메시지를 보냈어요 (${Math.round(content.durationMs / 1000)}초)`
+
     case 'nudge':
       return '콕 찔렀어요'
 
