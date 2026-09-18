@@ -159,7 +159,7 @@ export default function Chat() {
       useCallStore.getState().detach()
       stop()
     }
-  }, [profile, me, start, stop, rememberPeer, preferences?.audioMode])
+  }, [profile, me, start, stop, rememberPeer, preferences?.audioMode, setFlight])
 
   // 앱이 앞으로 돌아오면 바로 다시 붙는다.
   // 아이폰은 앱을 닫으면 몇 초 안에 소켓이 끊긴다.
