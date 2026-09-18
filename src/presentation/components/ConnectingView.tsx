@@ -1,178 +1,147 @@
-import { router } from 'expo-router'
-import { View } from 'react-native'
-import type {
-  DiscoveryMethod,
-  DiscoveryProgress,
-} from '@/application/ports/PeerDiscovery'
-import type { ConnectionState } from '@/domain/connection/ConnectionState'
+import { Linking, Platform, View } from 'react-native'
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
+import type { CharacterId } from '@/domain/peer/Character'
 import { Character } from '../characters/Character'
+import { type ConnectPhase, copyFor, longHintFor, type Role } from '../copy/connecting'
+import { useReducedMotion } from '../hooks/useReducedMotion'
 import { useTheme } from '../theme/ThemeProvider'
 import { Button } from './Button'
 import { Card } from './Card'
-import { Icon } from './Icon'
 import { Text } from './Text'
 
 /**
- * 상대를 찾는 동안 보여주는 화면.
+ * 연결되기 전에 보여주는 화면.
  *
- * **빙글빙글 도는 표시만 두면 사용자는 앱이 멈춘 줄 안다.** 지금 무엇을
- * 하는 중인지, 얼마나 걸리는지, 안 되면 무엇을 누르면 되는지 보여준다.
- * (docs/07-design-system.md 8장)
+ * **이 화면을 보는 사람은 이 앱이 어떻게 돌아가는지 모른다.** 떨어져
+ * 앉아 물어볼 수도 없다.
+ *
+ * 그래서 이렇게 만든다.
+ *   · 기술 단계를 숨긴다. 진행 숫자도 안 보여준다
+ *   · 캐릭터로 지금 상태를 말한다. 글을 안 읽어도 안다
+ *   · 사람이 할 일은 한 번에 하나만, 큰 버튼으로
  */
 
 interface ConnectingViewProps {
-  state: ConnectionState | null
-  progress: DiscoveryProgress | null
-  /** 이만큼 지나도 못 찾으면 코드 입력을 권한다 */
-  showManualHint: boolean
-  peerCharacter: Parameters<typeof Character>[0]['id']
-  onRetry(): void
+  phase: ConnectPhase
+  role: Role
+  peerName: string
+  peerCharacter: CharacterId
+  /** 한참 못 찾았다. 그때만 도움말을 보여준다 */
+  showHint: boolean
 }
 
 export function ConnectingView({
-  state,
-  progress,
-  showManualHint,
+  phase,
+  role,
+  peerName,
   peerCharacter,
-  onRetry,
+  showHint,
 }: ConnectingViewProps) {
   const theme = useTheme()
+  const reducedMotion = useReducedMotion()
+  const copy = copyFor(phase, peerName)
+  const hint = longHintFor(role, peerName)
+
+  const found = phase === 'found' || phase === 'joining'
 
   return (
     <View
       style={{
         alignItems: 'center',
-        gap: theme.spacing.lg,
+        gap: theme.spacing.xl,
         paddingHorizontal: theme.spacing.xl,
         paddingVertical: theme.spacing['2xl'],
       }}
     >
-      <Character id={peerCharacter} expression="disconnected" size={120} />
+      {/* 캐릭터가 상태를 말한다. 찾으면 또렷해지고 커진다 */}
+      <Animated.View
+        key={found ? 'found' : 'searching'}
+        entering={reducedMotion ? undefined : FadeIn.duration(400)}
+        style={{ opacity: found ? 1 : 0.4 }}
+      >
+        <Character
+          id={peerCharacter}
+          expression={found ? 'idle' : 'sleeping'}
+          size={found ? 150 : 110}
+        />
+      </Animated.View>
 
-      <View style={{ alignItems: 'center', gap: theme.spacing.xs }}>
-        <Text variant="heading">상대를 찾고 있어요</Text>
-        <Text variant="caption" color="textMuted" align="center">
-          주소를 입력할 필요 없어요. 앱이 스스로 찾습니다.
+      <Animated.View
+        key={phase}
+        entering={reducedMotion ? undefined : FadeInDown.duration(300)}
+        style={{ alignItems: 'center', gap: theme.spacing.sm }}
+      >
+        <Text variant="title" align="center">
+          {copy.title}
         </Text>
-      </View>
+        <Text color="textMuted" align="center">
+          {copy.detail}
+        </Text>
+      </Animated.View>
 
-      <Card style={{ alignSelf: 'stretch', gap: theme.spacing.sm }}>
-        {progress?.selfAddress !== undefined && (
-          <Step done label={`Wi-Fi 에 연결됨 (${progress.selfAddress})`} />
-        )}
+      {copy.action !== undefined && (
+        <Button label={copy.action} size="large" fullWidth onPress={openSettings} />
+      )}
 
-        {steps.map(step => (
-          <Step
-            key={step.method}
-            label={step.label}
-            active={progress?.method === step.method}
-            done={isDone(step.method, progress)}
-            detail={detailFor(step.method, progress)}
-          />
-        ))}
+      {!found && copy.action === undefined && <Breathing />}
 
-        <Step label="연결" done={state?.isUsable() ?? false} />
-      </Card>
-
-      {showManualHint && (
-        <Card raised style={{ alignSelf: 'stretch', gap: theme.spacing.md }}>
-          <Text variant="bodyStrong">잘 안 되나요?</Text>
-          <Text variant="caption" color="textMuted">
-            두 폰이 같은 Wi-Fi 에 있는지 확인해 주세요. 그래도 안 되면 코드를 직접 입력해
-            붙을 수 있어요.
-          </Text>
-          <Button
-            label="코드로 연결하기"
-            tone="neutral"
-            fullWidth
-            onPress={() => router.push('/pair-code')}
-          />
-          <Button label="다시 찾기" tone="ghost" fullWidth onPress={onRetry} />
+      {showHint && !found && (
+        <Card style={{ alignSelf: 'stretch', gap: theme.spacing.sm }}>
+          <Text variant="bodyStrong">{hint.title}</Text>
+          {hint.lines.map(line => (
+            <Text key={line} variant="caption" color="textMuted">
+              · {line}
+            </Text>
+          ))}
         </Card>
       )}
     </View>
   )
 }
 
-interface StepInfo {
-  readonly method: DiscoveryMethod
-  readonly label: string
-}
-
-/** 화면에 보여줄 단계들. 실제 순서와 같다 */
-const steps: readonly StepInfo[] = [
-  { method: 'gateway', label: '상대 폰에 바로 걸어보는 중' },
-  { method: 'broadcast', label: '같은 Wi-Fi 에 대고 부르는 중' },
-  { method: 'scan', label: '주소를 하나씩 살펴보는 중' },
-]
-
-function Step({
-  label,
-  active = false,
-  done = false,
-  detail,
-}: {
-  label: string
-  active?: boolean
-  done?: boolean
-  detail?: string
-}) {
+/**
+ * 뭔가 하는 중이라는 표시.
+ *
+ * 빙글빙글 도는 것보다 조용하다. 숨 쉬듯 천천히 밝아졌다 어두워진다.
+ */
+function Breathing() {
   const theme = useTheme()
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-      <View style={{ width: 18, alignItems: 'center' }}>
-        {done ? (
-          <Icon name="check" size={16} color="success" />
-        ) : active ? (
-          <View
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: 3.5,
-              backgroundColor: theme.colors.me,
-            }}
-          />
-        ) : (
-          <View
-            style={{
-              width: 5,
-              height: 5,
-              borderRadius: 2.5,
-              backgroundColor: theme.colors.textFaint,
-            }}
-          />
-        )}
-      </View>
-
-      <Text
-        variant="caption"
-        color={done ? 'text' : active ? 'me' : 'textFaint'}
-        style={{ flex: 1 }}
-      >
-        {label}
-        {detail !== undefined && ` · ${detail}`}
-      </Text>
+    <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+      {[0, 1, 2].map(index => (
+        <View
+          key={index}
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: theme.colors.textFaint,
+            opacity: 0.4 + index * 0.2,
+          }}
+        />
+      ))}
     </View>
   )
 }
 
-function isDone(method: DiscoveryMethod, progress: DiscoveryProgress | null): boolean {
-  if (progress === null) return false
-  if (progress.method === method) return progress.phase === 'succeeded'
+/**
+ * 설정 화면으로 데려다준다.
+ *
+ * 앱이 핫스팟이나 Wi-Fi 를 대신 켜줄 수는 없다. 운영체제가 막아뒀다.
+ * 그래서 문 앞까지만 데려다준다. (docs/02-tech-decisions.md D10)
+ */
+function openSettings(): void {
+  if (Platform.OS === 'ios') {
+    void Linking.openURL('App-Prefs:root=WIFI').catch(() => {
+      void Linking.openSettings()
+    })
+    return
+  }
 
-  // 앞 단계는 이미 지나갔다는 뜻이다
-  const order = steps.findIndex(s => s.method === method)
-  const current = steps.findIndex(s => s.method === progress.method)
-  return order >= 0 && current > order
-}
-
-function detailFor(
-  method: DiscoveryMethod,
-  progress: DiscoveryProgress | null,
-): string | undefined {
-  if (progress === null || progress.method !== method) return undefined
-  if (progress.checked === undefined || progress.total === undefined) return undefined
-
-  return `${progress.checked}/${progress.total}`
+  void Linking.sendIntent('android.settings.TETHER_SETTINGS').catch(() => {
+    void Linking.sendIntent('android.settings.WIRELESS_SETTINGS').catch(() => {
+      void Linking.openSettings()
+    })
+  })
 }

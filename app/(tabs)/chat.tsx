@@ -15,6 +15,7 @@ import { MessageInput } from '@/presentation/components/chat/MessageInput'
 import { TypingIndicator } from '@/presentation/components/chat/TypingIndicator'
 import { Text } from '@/presentation/components/Text'
 import { useReconnectOnForeground } from '@/presentation/hooks/useReconnectOnForeground'
+import { decidePhase } from '@/presentation/stores/connectPhase'
 import { useChatStore } from '@/presentation/stores/useChatStore'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
 import { useTheme } from '@/presentation/theme/ThemeProvider'
@@ -45,8 +46,10 @@ export default function Chat() {
   const markVisibleAsRead = useChatStore(s => s.markVisibleAsRead)
   const sendTyping = useChatStore(s => s.sendTyping)
   const sendNudgeToPeer = useChatStore(s => s.sendNudge)
-  const discovery = useChatStore(s => s.discovery)
   const searchingTooLong = useChatStore(s => s.searchingTooLong)
+  const everConnected = useChatStore(s => s.everConnected)
+  const announceDisconnect = useChatStore(s => s.announceDisconnect)
+  const peerFound = useChatStore(s => s.peerFound)
 
   const me = useMe(profile?.peerId)
   const listRef = useRef<FlatList<Message>>(null)
@@ -132,6 +135,7 @@ export default function Chat() {
       <ConnectionBar
         state={connection}
         pendingCount={pendingCount}
+        announceDisconnect={announceDisconnect}
         onPress={() => router.push('/connection-detail')}
       />
 
@@ -167,17 +171,17 @@ export default function Chat() {
               <EmptyState />
             ) : (
               <ConnectingView
-                state={connection}
-                progress={discovery}
-                showManualHint={searchingTooLong}
+                phase={decidePhase({
+                  role: profile.role,
+                  connection,
+                  onPrivateNetwork: null,
+                  peerFound,
+                  everConnected,
+                })}
+                role={profile.role}
+                peerName={peer?.displayName ?? '상대'}
                 peerCharacter={peer?.character ?? 'aria'}
-                onRetry={() => {
-                  const container = currentContainer()
-                  const transport = container?.transport as {
-                    reconnectNow?: () => Promise<unknown>
-                  }
-                  void transport?.reconnectNow?.()
-                }}
+                showHint={searchingTooLong}
               />
             )
           }

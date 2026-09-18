@@ -11,7 +11,7 @@ import { PROTOCOL_VERSION } from '@/application/ports/Envelope'
 import type { MessageTransport } from '@/application/ports/MessageTransport'
 import type { DiscoveryProgress } from '@/application/ports/PeerDiscovery'
 import { SerialQueue } from '@/application/shared/SerialQueue'
-import { ids, OFFER_MANUAL_AFTER_MS } from '@/composition/services'
+import { ids } from '@/composition/services'
 import type { ConnectionState } from '@/domain/connection/ConnectionState'
 import type { Conversation } from '@/domain/message/Conversation'
 import type { Message } from '@/domain/message/Message'
@@ -19,6 +19,7 @@ import { nudgeContent, textContent } from '@/domain/message/MessageContent'
 import type { CharacterId } from '@/domain/peer/Character'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { systemClock } from '@/domain/shared/Clock'
+import { ANNOUNCE_DISCONNECT_AFTER_MS, HINT_AFTER_MS } from './connectPhase'
 
 /**
  * 대화 화면이 보는 상태.
@@ -45,8 +46,14 @@ interface ChatState {
   codeMismatch: boolean
   /** 찾는 중에 무엇을 하고 있나. 화면에 보여준다 */
   discovery: DiscoveryProgress | null
-  /** 오래 못 찾았다. 코드 입력을 권할 때가 됐다 */
+  /** 오래 못 찾았다. 도움말을 보여줄 때가 됐다 */
   searchingTooLong: boolean
+  /** 한 번이라도 붙은 적 있나. "찾는 중"과 "다시 잇는 중"을 가른다 */
+  everConnected: boolean
+  /** 끊긴 지 오래됐나. 짧은 끊김은 화면에 안 알린다 */
+  announceDisconnect: boolean
+  /** 상대를 찾았나 */
+  peerFound: boolean
 
   start(deps: ChatDeps): Promise<void>
   send(text: string): Promise<void>
@@ -83,6 +90,7 @@ export const useChatStore = create<ChatState>((set, get) => {
   let typingTimer: ReturnType<typeof setTimeout> | null = null
   let lastTypingSentAt = 0
   let searchTimer: ReturnType<typeof setTimeout> | null = null
+  let disconnectTimer: ReturnType<typeof setTimeout> | null = null
 
   /** 화면에 보이는 목록을 저장소에서 다시 읽는다 */
   async function refresh(): Promise<void> {
@@ -226,6 +234,9 @@ export const useChatStore = create<ChatState>((set, get) => {
     codeMismatch: false,
     discovery: null,
     searchingTooLong: false,
+    everConnected: false,
+    announceDisconnect: false,
+    peerFound: false,
 
     async start(next) {
       deps = next
@@ -237,7 +248,27 @@ export const useChatStore = create<ChatState>((set, get) => {
         }),
         next.transport.onStateChange(state => {
           set({ connection: state })
-          if (state.isUsable()) set({ searchingTooLong: false, discovery: null })
+
+          if (state.isUsable()) {
+            if (disconnectTimer !== null) clearTimeout(disconnectTimer)
+            disconnectTimer = null
+            set({
+              searchingTooLong: false,
+              discovery: null,
+              everConnected: true,
+              announceDisconnect: false,
+              peerFound: true,
+            })
+          } else if (get().everConnected && disconnectTimer === null) {
+            // 짧은 끊김은 알리지 않는다. 비행기에서는 신호가 자주
+            // 흔들리는데 그때마다 빨간 띠가 뜨면 사람이 불안해진다.
+            disconnectTimer = setTimeout(() => {
+              if (get().connection?.isUsable() !== true) {
+                set({ announceDisconnect: true })
+              }
+            }, ANNOUNCE_DISCONNECT_AFTER_MS)
+          }
+
           if (!state.isUsable()) return
 
           // 연결이 돌아왔다. 인사하고 쌓인 것을 내보낸다.
@@ -281,8 +312,8 @@ export const useChatStore = create<ChatState>((set, get) => {
       // 오래 못 찾으면 코드 입력을 권한다
       if (searchTimer !== null) clearTimeout(searchTimer)
       searchTimer = setTimeout(() => {
-        if (!get().connection?.isUsable()) set({ searchingTooLong: true })
-      }, OFFER_MANUAL_AFTER_MS)
+        if (get().connection?.isUsable() !== true) set({ searchingTooLong: true })
+      }, HINT_AFTER_MS)
 
       await queue.run(refresh)
       set({ ready: true })
@@ -416,6 +447,8 @@ export const useChatStore = create<ChatState>((set, get) => {
       typingTimer = null
       if (searchTimer !== null) clearTimeout(searchTimer)
       searchTimer = null
+      if (disconnectTimer !== null) clearTimeout(disconnectTimer)
+      disconnectTimer = null
       deps = null
       set({ ready: false, messages: [], conversation: null })
     },
