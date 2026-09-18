@@ -24,8 +24,14 @@ import { Text } from './Text'
 interface ConnectingViewProps {
   phase: ConnectPhase
   role: Role
-  peerName: string
-  peerCharacter: CharacterId
+  /**
+   * 한 번도 안 이어졌으면 `null` 이다.
+   *
+   * **이름도 캐릭터도 인사를 주고받아야 안다.** 모를 때 아무거나 끼워
+   * 넣으면 처음 켠 사람에게 낯선 이름과 얼굴이 뜬다.
+   */
+  peerName: string | null
+  peerCharacter: CharacterId | null
   /** 한참 못 찾았다. 그때만 도움말을 보여준다 */
   showHint: boolean
 }

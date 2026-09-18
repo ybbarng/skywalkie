@@ -12,11 +12,25 @@
  */
 
 import { build } from 'esbuild'
-import { readFileSync } from 'node:fs'
+import { copyFileSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+
+/**
+ * 탭에 뜨는 그림을 앱 아이콘과 같게 맞춘다.
+ *
+ * 베껴 두는 이유는 데모가 `demo/` 만 내보내는 서버로 뜨기 때문이다.
+ * 바깥 폴더는 브라우저가 못 가져간다. **원본은 하나뿐이고** 여기서
+ * 베낀 것은 무시 목록에 있다.
+ */
+function copyIcon(): void {
+  copyFileSync(
+    resolve(root, 'assets/icon/icon.svg'),
+    resolve(root, 'demo/favicon.svg'),
+  )
+}
 
 /**
  * `.env` 를 읽는다.
@@ -51,6 +65,7 @@ function readEnv(): Record<string, string> {
 }
 
 async function run(): Promise<void> {
+  copyIcon()
   const env = readEnv()
 
   /**

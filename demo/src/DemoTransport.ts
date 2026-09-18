@@ -80,8 +80,15 @@ export class DemoTransport implements MessageTransport {
     return ok(undefined)
   }
 
-  /** 상대가 붙어왔다. 여는 쪽이 쓴다 */
+  /**
+   * 상대가 붙어왔다. 여는 쪽이 쓴다.
+   *
+   * **선이 진짜로 이어진 뒤에만 받는다.** 예전에는 묻지도 않고
+   * 이어진 것으로 쳤다. 그래서 상대가 못 붙었는데도 여는 쪽 화면만
+   * "연결됨" 이 되는 일이 있었다.
+   */
   acceptIncoming(): void {
+    if (!this.net.isLinked()) return
     if (this.state.isUsable()) return
     this.moveTo(this.state.startSearching())
     this.moveTo(this.state.startHandshake('wifi'))

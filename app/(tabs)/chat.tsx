@@ -15,6 +15,7 @@ import type { Message } from '@/domain/message/Message'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { peerId } from '@/domain/peer/PeerId'
 import { Character } from '@/presentation/characters/Character'
+import { peerFace, peerLabel, peerName } from '@/presentation/characters/peerFace'
 import { ConnectingView } from '@/presentation/components/ConnectingView'
 import { ConnectionBar } from '@/presentation/components/ConnectionBar'
 import { CallOverlay } from '@/presentation/components/call/CallOverlay'
@@ -174,7 +175,7 @@ export default function Chat() {
   useMessageNotifications({
     enabled: ready,
     me,
-    peerName: peer?.displayName ?? '상대',
+    peerName: peerLabel(peer),
     messages,
   })
 
@@ -260,16 +261,16 @@ export default function Chat() {
         mine={battery.level}
         charging={battery.charging}
         peer={peerBattery}
-        peerName={peer?.displayName ?? '상대'}
+        peerName={peerLabel(peer)}
         role={profile.role}
         callActive={call.state.isLive()}
       />
 
       <PeerHeader
-        peerCharacter={peer?.character ?? 'aria'}
+        peerCharacter={peerFace(peer)}
         typing={peerTyping}
         connected={connected}
-        name={peer?.displayName ?? '상대'}
+        name={peerLabel(peer)}
         canCall={call.available && connected}
         onCall={() => void call.call('voice')}
         onVideoCall={() => void call.call('video')}
@@ -306,8 +307,8 @@ export default function Chat() {
                   everConnected,
                 })}
                 role={profile.role}
-                peerName={peer?.displayName ?? '상대'}
-                peerCharacter={peer?.character ?? 'aria'}
+                peerName={peerName(peer)}
+                peerCharacter={peerFace(peer)}
                 showHint={searchingTooLong}
               />
             )
@@ -340,8 +341,8 @@ export default function Chat() {
 
       <CallOverlay
         state={call.state}
-        peerName={peer?.displayName ?? '상대'}
-        peerCharacter={peer?.character ?? 'aria'}
+        peerName={peerLabel(peer)}
+        peerCharacter={peerFace(peer)}
         myCharacter={profile.character}
         localUrl={call.localUrl}
         remoteUrl={call.remoteUrl}

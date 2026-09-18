@@ -1,6 +1,7 @@
 import { View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Character } from '@/presentation/characters/Character'
+import { peerFace } from '@/presentation/characters/peerFace'
 import { Card } from '@/presentation/components/Card'
 import { Text } from '@/presentation/components/Text'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
@@ -27,7 +28,7 @@ export default function Talk() {
           gap: theme.spacing.lg,
         }}
       >
-        <Character id={peer?.character ?? 'aria'} expression="sleeping" size={160} />
+        <Character id={peerFace(peer)} expression="sleeping" size={160} />
 
         <Card style={{ gap: theme.spacing.sm }}>
           <Text variant="heading" align="center">

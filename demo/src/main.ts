@@ -2,7 +2,7 @@ import type { Message } from '@/domain/message/Message'
 import { type StickerPose, stickerPoses } from '@/domain/message/MessageContent'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { ulidGenerator } from '@/infrastructure/platform/UlidGenerator'
-import { copyFor } from '@/presentation/copy/connecting'
+import { type ConnectPhase, copyFor } from '@/presentation/copy/connecting'
 import { decidePhase } from '@/presentation/stores/connectPhase'
 import { type Expression, character, icon, sticker } from './art'
 import { Device } from './Device'
@@ -161,46 +161,52 @@ function renderLog(device: Device): string {
   return `<div class="log" data-log="${device.side}">${out}</div>`
 }
 
-function renderConnecting(device: Device): string {
-  const other = device.side === 'host' ? iphone : android
-  const peerName = device.peerName ?? other.profile.displayName
+/** **진짜 판단 코드를 쓴다.** src/presentation/stores/connectPhase.ts */
+function phaseOf(device: Device): ConnectPhase {
+  const onOurNetwork = device.side === 'host' ? net.hotspotOn : net.guestJoined
 
-  // **진짜 판단 코드를 쓴다.** src/presentation/stores/connectPhase.ts
-  const onOurNetwork = device.side === 'host'
-    ? net.hotspotOn
-    : net.guestJoined
-
-  const phase = decidePhase({
+  return decidePhase({
     role: device.side,
     connection: device.connection,
     onPrivateNetwork: onOurNetwork,
     peerFound: false,
     everConnected: device.messages.length > 0,
   })
+}
+
+function renderConnecting(device: Device): string {
+  /**
+   * **상대를 넘겨다보지 않는다.**
+   *
+   * 인사(`hello`)를 주고받기 전에는 상대가 누구인지 알 길이 없다.
+   * 데모는 두 기기를 한 화면에 들고 있어서 몰래 볼 수 있지만, 그러면
+   * 실제 첫 연결과 다른 것을 보여주게 된다. 앱과 똑같이 모른 채로 둔다.
+   */
+  const peerName = device.peerName
 
   // **진짜 문구를 쓴다.** src/presentation/copy/connecting.ts
-  const copy = copyFor(phase, peerName, { ssid: HOTSPOT_SSID, password: '' })
+  const copy = copyFor(phaseOf(device), peerName, {
+    ssid: HOTSPOT_SSID,
+    password: '',
+  })
 
   const action = copy.action === undefined
     ? ''
     : `<button class="action" data-fix="${device.side}">${esc(copy.action)}</button>`
 
   return '<div class="connecting">'
-    + `<div class="dim">${character(other.profile.character, 'sleeping', 104)}</div>`
+    + `<div class="dim">${character(device.peerCharacter, 'sleeping', 104)}</div>`
     + `<h2>${esc(copy.title)}</h2><p>${esc(copy.detail)}</p>${action}`
-    + `<div class="phasetag">${phase}</div>`
     + '</div>'
 }
 
 function renderHead(device: Device): string {
-  const other = device.side === 'host' ? iphone : android
   const live = device.connection.isUsable()
   const expr: Expression = !live ? 'disconnected' : device.peerTyping ? 'typing' : 'idle'
-  const peerName = device.peerName ?? other.profile.displayName
-  const peerChar = device.peerCharacter ?? other.profile.character
+  const peerName = device.peerName ?? '상대'
 
   return '<div class="peerhead">'
-    + character(peerChar as never, expr, 38)
+    + character(device.peerCharacter, expr, 38)
     + `<div class="who"><div class="name">${esc(peerName)}</div>`
     + `<div class="state">${!live ? '연결을 기다리는 중' : device.peerTyping ? '입력 중...' : '연결됨'}</div></div>`
     + '</div>'
@@ -215,7 +221,12 @@ function renderLinkbar(device: Device): string {
   if (device.messages.length > 0) {
     return `<div class="linkbar bad">${icon('alert', 13)}연결이 끊겼어요 · 다시 붙는 중</div>`
   }
-  return `<div class="linkbar idle">${icon('wifi', 13)}${esc(state.phase)}</div>`
+
+  // **영어 단계 이름을 띄우지 않는다.** `searching` 이라고 적어두면
+  // 앱이 고장 난 줄 안다. 아래 로그 창에는 그대로 적어둔다.
+  const waiting = state.phase === 'searching' || state.phase === 'handshaking'
+  return `<div class="linkbar idle">${icon('wifi', 13)}`
+    + `${waiting ? '상대를 찾는 중' : '아직 연결 전이에요'}</div>`
 }
 
 function renderDrawer(device: Device): string {
@@ -243,11 +254,28 @@ function renderComposer(device: Device): string {
     + '</div>'
 }
 
+/**
+ * 위쪽 띠.
+ *
+ * **두 운영체제가 다르게 그린다.** 아이폰은 배터리가 가로로 눕고,
+ * 안드로이드는 세로로 선다. 비행기 표시도 자리가 다르다.
+ */
+function renderStatusbar(device: Device): string {
+  const hosting = net.hotspotOn && device.side === 'host'
+  const joined = net.guestJoined && device.side === 'guest'
+
+  const right = '<span class="right">'
+    + (hosting ? '<span>핫스팟</span>' : '')
+    + (joined ? icon('wifi', 12) : '')
+    + '<span>✈︎</span><span class="batt"></span></span>'
+
+  return `<div class="statusbar"><span>${clockOf(new Date())}</span>${right}</div>`
+}
+
 function renderPhone(device: Device): string {
   const live = device.connection.isUsable()
 
-  return `<div class="statusbar"><span>${clockOf(new Date())}</span>`
-    + `<span>${net.hotspotOn && device.side === 'host' ? '핫스팟 ' : ''}✈︎</span></div>`
+  return renderStatusbar(device)
     + renderLinkbar(device)
     + (device.codeMismatch ? '<div class="notice bad">코드가 다른 상대가 붙었어요</div>' : '')
     + (live ? renderHead(device) : '')
@@ -258,23 +286,27 @@ function renderPhone(device: Device): string {
 function renderPanel(): string {
   const linked = net.isLinked()
 
+  /*
+    **여기 있는 것은 사람이 폰으로 하는 일뿐이다.**
+
+    핫스팟을 켜고, Wi-Fi 를 고르고, 멀어졌다 돌아온다. 서로 찾아
+    붙는 것은 앱이 알아서 하므로 누를 것이 없다. 아래 두 줄은
+    좁고 나쁜 길을 흉내 내는 손잡이다.
+  */
   return '<button data-act="auto">바로 이어주기</button>'
     + '<span class="sep"></span>'
     + `<button class="${net.hotspotOn ? 'on' : ''}" data-act="hotspot">`
     + `${net.hotspotOn ? '핫스팟 끄기' : '핫스팟 켜기'}</button>`
-    + `<button class="${net.guestJoined ? 'on' : ''}" data-act="join" ${net.hotspotOn ? '' : 'disabled'}>`
+    + `<button class="${net.guestJoined ? 'on' : ''}" data-act="join">`
     + `${net.guestJoined ? 'Wi-Fi 에서 나가기' : 'Wi-Fi 에 들어가기'}</button>`
-    + `<button data-act="connect" ${net.guestJoined && !linked ? '' : 'disabled'}>상대 찾아 잇기</button>`
     + '<span class="sep"></span>'
-    + `<button data-act="drop" ${linked ? '' : 'disabled'}>신호 끊기</button>`
-    + `<button data-act="reconnect" ${!linked && net.guestJoined ? '' : 'disabled'}>다시 잇기</button>`
+    + `<button data-act="drop" ${linked ? '' : 'disabled'}>멀어지기</button>`
+    + `<button data-act="reconnect" ${net.jammed ? '' : 'disabled'}>돌아오기</button>`
+    + `<button data-act="scenario" ${linked ? '' : 'disabled'}>끊겼다 되찾기 해보기</button>`
     + '<span class="sep"></span>'
     + `<button class="${net.chop > 1 ? 'on' : ''}" data-act="chop">바이트 쪼개기</button>`
     + `<button class="${net.lossRate > 0 ? 'on' : ''}" data-act="loss">10% 잃어버리기</button>`
     + `<button class="${net.latencyMs > 200 ? 'on' : ''}" data-act="slow">느린 망</button>`
-    + '<span class="sep"></span>'
-    + '<span class="sep"></span>'
-    + `<button data-act="scenario" ${linked ? '' : 'disabled'}>끊겼다 되찾기 해보기</button>`
     + '<span class="sep"></span>'
     + `<button data-act="theme">${ui.theme === 'dark' ? '밝은 화면' : '어두운 화면'}</button>`
     + `<button class="${ui.logOpen ? 'on' : ''}" data-act="logtoggle">오간 기록</button>`
@@ -289,8 +321,21 @@ function renderNetLog(): string {
       + `<span class="txt">${esc(event.text)}</span></div>`
   }).join('')
 
+  /*
+    단계 이름은 **폰 밖에** 둔다.
+
+    `need-hotspot` 같은 말은 앱 화면에 안 뜬다. 여기 적어두는 이유는
+    진짜 `decidePhase` 가 무엇을 골랐는지 보여주기 위해서다.
+  */
+  const nameOf = (device: Device): string =>
+    device.connection.isUsable() ? '<code>이어짐</code>' : `<code>${phaseOf(device)}</code>`
+
+  const phases = `<div class="phases">지금 단계 · 안드로이드 ${nameOf(android)}`
+    + ` · 아이폰 ${nameOf(iphone)}</div>`
+
   return '<div class="netlog"><div class="netlog-head">오간 것</div>'
     + `<div class="events">${rows || '<div class="ev info"><span class="txt">아직 아무 일도 없어요</span></div>'}</div>`
+    + phases
     + `<div class="bytes">보낸 바이트 · 안드로이드 ${android.transport.bytesOut}B · 아이폰 ${iphone.transport.bytesOut}B`
     + `${android.transport.rejected + iphone.transport.rejected > 0
         ? ` · 버려진 봉투 ${android.transport.rejected + iphone.transport.rejected}` : ''}</div></div>`
@@ -332,33 +377,56 @@ function el(id: string): HTMLElement {
 
 /* ── 조작 ─────────────────────────────────────────── */
 
-async function connectBoth(): Promise<void> {
-  // 여는 쪽이 먼저 자리를 깐다
-  android.acceptIncoming()
-  const failed = await iphone.connect()
+/**
+ * 붙는 쪽이 찾아 나선다.
+ *
+ * **앱에는 "상대 찾아 잇기" 같은 버튼이 없다.** 켜져 있는 동안
+ * 알아서 계속 찾는다. 사람이 누를 것은 핫스팟과 Wi-Fi 뿐이다.
+ * 그래서 데모도 버튼 대신 아래 `setInterval` 이 계속 두드린다.
+ */
+async function tryConnect(): Promise<void> {
+  if (net.isLinked()) return
 
+  const failed = await iphone.connect()
   if (failed !== null) {
-    net.note('guest', failed, 'warn')
     paint()
     return
   }
 
-  // 양쪽 다 이어진 것으로 본다. 실제 앱도 소켓이 붙으면 그렇다.
+  // 붙었으면 여는 쪽도 받는다. 선이 없으면 `acceptIncoming` 이 무시한다.
   android.acceptIncoming()
   paint()
 }
 
+/**
+ * 계속 두드린다.
+ *
+ * 실제 앱도 이렇게 한다. 핫스팟이 꺼져 있거나 Wi-Fi 밖이면
+ * `discover` 가 바로 실패하고, 조건이 갖춰지는 순간 저절로 붙는다.
+ */
+let knocking = false
+setInterval(() => {
+  if (knocking) return
+  if (net.isLinked() || !net.hotspotOn || !net.guestJoined || net.jammed) return
+
+  knocking = true
+  void tryConnect().finally(() => {
+    knocking = false
+  })
+}, 800)
+
 /** 핫스팟 켜기부터 잇기까지 한 번에 */
 async function autoConnect(): Promise<void> {
+  net.setJammed(false)
   net.setHotspot(true)
   paint()
-  await sleep(300)
+  await sleep(400)
 
   net.setGuestJoined(true)
   paint()
-  await sleep(300)
+  await sleep(400)
 
-  await connectBoth()
+  await tryConnect()
 }
 
 /**
@@ -373,7 +441,7 @@ async function recoveryScenario(): Promise<void> {
   await android.sendText('이건 끊기기 전에 보낸 말')
   await sleep(600)
 
-  net.unlink('시나리오')
+  net.setJammed(true)
   android.transport.lose()
   iphone.transport.lose()
   paint()
@@ -386,8 +454,9 @@ async function recoveryScenario(): Promise<void> {
   await iphone.sendText('나도 끊긴 동안 썼어')
   await sleep(700)
 
-  net.note('net', '다시 붙습니다. 놓친 말을 되찾을 거예요')
-  await connectBoth()
+  net.note('net', '신호를 돌려줍니다. 앱이 알아서 다시 붙어요')
+  net.setJammed(false)
+  paint()
 }
 
 function sleep(ms: number): Promise<void> {
@@ -418,16 +487,18 @@ document.addEventListener('click', event => {
     return paint()
   }
 
-  if (act === 'connect') return void connectBoth()
-
   if (act === 'drop') {
-    net.unlink('사람이 끊음')
+    net.setJammed(true)
     android.transport.lose()
     iphone.transport.lose()
     return paint()
   }
 
-  if (act === 'reconnect') return void connectBoth()
+  if (act === 'reconnect') {
+    // 신호만 돌려준다. 붙는 건 앱이 알아서 한다.
+    net.setJammed(false)
+    return paint()
+  }
 
   if (act === 'chop') {
     net.chop = net.chop > 1 ? 1 : 12
@@ -457,13 +528,16 @@ document.addEventListener('click', event => {
     return paint()
   }
 
-  /* 이어지는 화면의 "핫스팟 켜러 가기" / "Wi-Fi 고르러 가기" */
+  /*
+    이어지는 화면의 "핫스팟 켜러 가기" / "Wi-Fi 고르러 가기".
+
+    **누른다고 붙지 않는다.** 설정으로 데려다줄 뿐이다. 상대가 핫스팟을
+    안 켰으면 목록에 아무것도 없고, `setGuestJoined` 가 그렇다고 적는다.
+    붙는 것은 조건이 갖춰진 뒤 앱이 알아서 한다.
+  */
   if (target.dataset.fix !== undefined) {
     if (target.dataset.fix === 'host') net.setHotspot(true)
-    else {
-      net.setGuestJoined(true)
-      void connectBoth()
-    }
+    else net.setGuestJoined(true)
     return paint()
   }
 

@@ -61,6 +61,15 @@ export class VirtualNetwork {
   /** 바이트를 몇 조각으로 쪼개 보낼까. 실제 소켓이 이렇게 준다 */
   chop = 1
 
+  /**
+   * 신호가 막혀 있나.
+   *
+   * 같은 망에 있어도 안 닿을 때가 있다. 멀어졌거나, 벽이 있거나,
+   * 폰이 잠들었거나. **앱은 이럴 때 알아서 다시 붙으려 든다.**
+   * 데모에서 그 순간을 붙잡아 두려고 만든 손잡이다.
+   */
+  jammed = false
+
   private readonly listeners = new Map<Side, Listener>()
   private linked = false
 
@@ -124,6 +133,11 @@ export class VirtualNetwork {
       return { found: false, address: null }
     }
 
+    if (this.jammed) {
+      this.note('guest', '신호가 안 닿아요. 계속 불러볼게요', 'warn')
+      return { found: false, address: null }
+    }
+
     if (!this.listeners.has('host')) {
       this.note('guest', '상대 앱이 안 열려 있어요', 'warn')
       return { found: false, address: null }
@@ -144,7 +158,7 @@ export class VirtualNetwork {
 
   /** 아이폰이 찾은 주소로 붙는다 */
   connect(): boolean {
-    if (!this.hotspotOn || !this.guestJoined) return false
+    if (!this.hotspotOn || !this.guestJoined || this.jammed) return false
     if (!this.listeners.has('host') || !this.listeners.has('guest')) return false
 
     this.linked = true
@@ -154,7 +168,22 @@ export class VirtualNetwork {
   }
 
   isLinked(): boolean {
-    return this.linked && this.hotspotOn && this.guestJoined
+    return this.linked && this.hotspotOn && this.guestJoined && !this.jammed
+  }
+
+  /** 신호를 막거나 푼다. 풀면 앱이 알아서 다시 붙는다 */
+  setJammed(on: boolean): void {
+    if (this.jammed === on) return
+    this.jammed = on
+
+    if (on) {
+      this.note('net', '신호가 끊겼어요', 'warn')
+      this.unlink('신호가 안 닿음')
+    } else {
+      this.note('net', '신호가 돌아왔어요. 곧 다시 붙어요')
+    }
+
+    this.onChange?.()
   }
 
   unlink(why: string): void {

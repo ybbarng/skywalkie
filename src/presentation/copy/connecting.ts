@@ -48,28 +48,66 @@ interface PhaseCopy {
 const UNKNOWN_WIFI = '상대 폰 이름'
 
 /**
+ * 상대를 부르는 말.
+ *
+ * **이름은 인사를 주고받아야 안다.** 한 번도 안 이어졌으면 모른다.
+ * 그때 아무 이름이나 넣으면 "누구세요?" 가 된다.
+ *
+ * 조사까지 여기서 정해두는 이유는 받침이 다르기 때문이다. 이름을
+ * 알면 "지민님이", 모르면 "상대가" 다. "상대이" 라고 쓸 수는 없다.
+ */
+interface PeerWords {
+  /** 지민님 · 상대 */
+  readonly name: string
+  /** 지민님이 · 상대가 */
+  readonly subject: string
+  /** 지민님은 · 상대는 */
+  readonly topic: string
+  /** 지민님을 · 상대를 */
+  readonly object: string
+}
+
+function wordsFor(peerName: string | null): PeerWords {
+  // 이름을 알면 "님" 이 붙어 늘 받침이 있다. 모르면 "상대" 라 늘 없다.
+  if (peerName === null || peerName.length === 0) {
+    return { name: '상대', subject: '상대가', topic: '상대는', object: '상대를' }
+  }
+
+  return {
+    name: `${peerName}님`,
+    subject: `${peerName}님이`,
+    topic: `${peerName}님은`,
+    object: `${peerName}님을`,
+  }
+}
+
+/**
  * 핫스팟을 밖에서 받는다. 받지 않으면 `.env` 에 적어둔 것을 쓴다.
  * 적어두지 않았을 때 어떻게 말하는지를 시험할 수 있어야 해서 열어뒀다.
+ *
+ * `peerName` 이 `null` 이면 아직 상대를 모른다는 뜻이다.
  */
 export function copyFor(
   phase: ConnectPhase,
-  peerName: string,
+  peerName: string | null,
   hotspot: HomeHotspot | null = homeHotspot,
 ): PhaseCopy {
+  const peer = wordsFor(peerName)
+
   switch (phase) {
     // 처음 켤 때와 비행기에서 꺼졌을 때 둘 다 여기로 온다.
     // **둘 다 할 일이 같으므로** 두 경우에 다 맞는 말로 적는다.
     case 'need-hotspot':
       return {
         title: '핫스팟이 꺼져 있어요',
-        detail: `켜주시면 ${peerName}님이 바로 들어와요.\n비행기 모드를 켜면 같이 꺼지니 그때마다 다시 켜주세요.`,
+        detail: `켜주시면 ${peer.subject} 바로 들어와요.\n비행기 모드를 켜면 같이 꺼지니 그때마다 다시 켜주세요.`,
         action: '핫스팟 켜러 가기',
       }
 
     case 'waiting-for-peer':
       return {
         title: '준비됐어요',
-        detail: `${peerName}님이 들어오기를 기다리는 중이에요.\n들어오면 바로 알려드릴게요.`,
+        detail: `${peer.subject} 들어오기를 기다리는 중이에요.\n들어오면 바로 알려드릴게요.`,
       }
 
     // 이름을 앱이 알고 있으니 물어볼 필요가 없다.
@@ -80,8 +118,8 @@ export function copyFor(
         title: 'Wi-Fi 에 들어가면 돼요',
         detail:
           hotspot === null
-            ? `설정에서 ${peerName}님 폰 이름을 골라주세요.\n화면을 보여달라고 하면 이름이 크게 떠 있어요.`
-            : `Wi-Fi 목록에서 ${hotspot.ssid} 를 골라주세요.\n안 보이면 ${peerName}님이 잠시 껐을 수도 있어요. 곧 다시 켜질 거예요.`,
+            ? `설정에서 ${peer.name} 폰 이름을 골라주세요.\n화면을 보여달라고 하면 이름이 크게 떠 있어요.`
+            : `Wi-Fi 목록에서 ${hotspot.ssid} 를 골라주세요.\n안 보이면 ${peer.subject} 잠시 껐을 수도 있어요. 곧 다시 켜질 거예요.`,
         action: 'Wi-Fi 고르러 가기',
       }
 
@@ -93,7 +131,7 @@ export function copyFor(
 
     case 'found':
       return {
-        title: `${peerName}님을 찾았어요`,
+        title: `${peer.object} 찾았어요`,
         detail: '바로 이어드릴게요.',
       }
 
@@ -120,7 +158,7 @@ export const takingLong = {
   host: {
     title: '아직 안 들어왔나요?',
     lines: [
-      `${'{peer}'}님은 Wi-Fi 만 켜면 돼요`,
+      '{peer.topic} Wi-Fi 만 켜면 돼요',
       '거기에 {wifi} 가 떠 있어야 해요',
       '비행기 모드를 켰어도 Wi-Fi 는 따로 켤 수 있어요',
     ],
@@ -128,7 +166,7 @@ export const takingLong = {
   guest: {
     title: '목록에 안 보이나요?',
     lines: [
-      `${'{peer}'}님 쪽에서 아직 안 켰을 수도 있어요. 조금 뒤에 다시 보세요`,
+      '{peer.name} 쪽에서 아직 안 켰을 수도 있어요. 조금 뒤에 다시 보세요',
       '목록에 {wifi} 가 있는지 보고, 없으면 아래로 당겨 새로고침해 보세요',
       '비행기 모드를 켰어도 Wi-Fi 는 따로 켤 수 있어요',
     ],
@@ -137,16 +175,20 @@ export const takingLong = {
 
 export function longHintFor(
   role: Role,
-  peerName: string,
+  peerName: string | null,
   hotspot: HomeHotspot | null = homeHotspot,
 ) {
   const hint = takingLong[role]
+  const peer = wordsFor(peerName)
   const wifi = hotspot?.ssid ?? UNKNOWN_WIFI
 
   return {
     title: hint.title,
     lines: hint.lines.map(line =>
-      line.replace('{peer}', peerName).replace('{wifi}', wifi),
+      line
+        .replace('{peer.topic}', peer.topic)
+        .replace('{peer.name}', peer.name)
+        .replace('{wifi}', wifi),
     ),
   }
 }

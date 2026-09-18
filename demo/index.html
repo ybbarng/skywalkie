@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Skywalkie — 가상 기기 두 대</title>
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
 
 <!--
   진짜 앱 코드를 브라우저에서 돌린다.
@@ -66,25 +67,90 @@ h1 { font-size: 19px; margin: 0; }
 .phone-label { font-size: 12px; color: var(--muted); }
 .phone-label b { color: var(--text); }
 
+/*
+  두 폰은 같은 앱이지만 **같아 보이지 않는다.**
+
+  안드로이드는 모서리가 덜 둥글고 카메라가 구멍으로 뚫려 있다.
+  아이폰은 모서리가 크게 둥글고 위에 알약이 떠 있다. 밑에 있는 것도
+  하나는 세 칸짜리 막대, 하나는 손잡이 하나다.
+
+  앱이 만드는 것(말풍선·입력줄)까지 OS 결을 따라간다. 실제로 두
+  기기에서 앱이 어떻게 달라 보이는지 알아야 해서 흉내 낸다.
+*/
 .phone {
-  width: 320px; height: 648px; border-radius: 40px; padding: 10px;
+  width: 320px; height: 648px; padding: 10px;
   background: var(--chrome); box-shadow: 0 0 0 2px var(--border), 0 20px 50px rgba(0,0,0,.45);
   position: relative;
 }
+.phone[data-os="ios"] { border-radius: 46px; }
+.phone[data-os="android"] { border-radius: 30px; }
+
 .screen {
-  width: 100%; height: 100%; border-radius: 31px; overflow: hidden;
+  width: 100%; height: 100%; overflow: hidden;
   background: var(--bg); color: var(--text);
   display: flex; flex-direction: column; position: relative;
 }
-.notch {
-  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-  width: 104px; height: 22px; border-radius: 12px; background: var(--chrome); z-index: 20;
+[data-os="ios"] .screen { border-radius: 37px; }
+[data-os="android"] .screen { border-radius: 21px; }
+
+/* 아이폰 위쪽 알약 */
+.island {
+  position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+  width: 92px; height: 25px; border-radius: 13px; background: #000; z-index: 20;
+}
+/* 안드로이드 카메라 구멍 */
+.camera {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  width: 11px; height: 11px; border-radius: 6px; background: #000; z-index: 20;
 }
 
-.statusbar {
-  height: 32px; display: flex; align-items: flex-end; justify-content: space-between;
-  padding: 0 16px 2px; font-size: 11px; color: var(--muted); flex: none;
+/* 밑에 있는 것 */
+.navbar {
+  position: absolute; left: 0; right: 0; bottom: 12px; z-index: 20;
+  display: flex; align-items: center; justify-content: center; gap: 46px;
+  pointer-events: none;
 }
+[data-os="ios"] .navbar b {
+  width: 128px; height: 5px; border-radius: 3px; background: var(--text); opacity: .55;
+}
+[data-os="android"] .navbar i {
+  width: 12px; height: 12px; opacity: .5;
+  border: 1.6px solid var(--text);
+}
+/* 뒤로 · 홈 · 최근 */
+[data-os="android"] .navbar i:nth-child(1) { border-radius: 2px 8px 8px 2px; border-width: 1.6px 0 1.6px 1.6px; height: 13px; transform: rotate(45deg); }
+[data-os="android"] .navbar i:nth-child(2) { border-radius: 7px; }
+[data-os="android"] .navbar i:nth-child(3) { border-radius: 2px; }
+
+.statusbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px; font-size: 11.5px; color: var(--text); flex: none;
+}
+/* 알약을 피해 더 내려간다 */
+[data-os="ios"] .statusbar { height: 46px; padding: 0 26px; font-weight: 600; }
+[data-os="android"] .statusbar { height: 34px; font-weight: 500; }
+.statusbar .right { display: flex; align-items: center; gap: 5px; }
+.statusbar .batt {
+  width: 20px; height: 10px; border-radius: 3px; border: 1.3px solid currentColor;
+  position: relative; opacity: .85;
+}
+.statusbar .batt::after {
+  content: ''; position: absolute; right: -3px; top: 3px;
+  width: 1.6px; height: 4px; border-radius: 1px; background: currentColor;
+}
+.statusbar .batt::before {
+  content: ''; position: absolute; inset: 1.5px; width: 60%;
+  border-radius: 1.5px; background: currentColor;
+}
+/* 안드로이드는 세로로 선 배터리다 */
+[data-os="android"] .statusbar .batt {
+  width: 10px; height: 17px; border-radius: 3px;
+}
+[data-os="android"] .statusbar .batt::after {
+  right: auto; left: 50%; top: -3px; transform: translateX(-50%);
+  width: 4px; height: 2px;
+}
+[data-os="android"] .statusbar .batt::before { inset: 1.5px; width: auto; top: 40%; }
 .linkbar {
   padding: 5px 14px; font-size: 11.5px; font-weight: 600; flex: none;
   display: flex; align-items: center; gap: 6px;
@@ -102,6 +168,15 @@ h1 { font-size: 19px; margin: 0; }
 .peerhead .name { font-weight: 700; font-size: 14px; }
 .peerhead .state { font-size: 11.5px; color: var(--muted); }
 
+/*
+  아이폰은 이름을 가운데 둔다. 안드로이드는 왼쪽에 붙인다.
+  두 운영체제가 제목을 다루는 방식이 이렇게 갈린다.
+*/
+[data-os="ios"] .peerhead { flex-direction: column; gap: 3px; padding: 4px 14px 9px; }
+[data-os="ios"] .peerhead .who { flex: none; text-align: center; }
+[data-os="ios"] .peerhead .name { font-size: 13px; font-weight: 600; }
+[data-os="ios"] .peerhead .state { font-size: 10.5px; }
+
 .log { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; }
 .log::-webkit-scrollbar { width: 0; }
 .log.empty { justify-content: center; align-items: center; text-align: center; }
@@ -114,13 +189,22 @@ h1 { font-size: 19px; margin: 0; }
 .row { display: flex; align-items: flex-end; gap: 6px; margin-top: 9px; }
 .row.mine { flex-direction: row-reverse; }
 .bubble {
-  max-width: 74%; padding: 8px 13px; border-radius: 20px;
+  max-width: 74%; padding: 8px 13px;
   background: var(--peer); color: var(--peer-text);
   white-space: pre-wrap; word-break: break-word; font-size: 14px;
 }
-.row.mine .bubble { background: var(--me); color: var(--me-text); border-bottom-right-radius: 6px; }
-.row:not(.mine) .bubble { border-bottom-left-radius: 6px; }
+.row.mine .bubble { background: var(--me); color: var(--me-text); }
 .row .bubble.bare, .row.mine .bubble.bare { background: none; padding: 0; border-radius: 0; }
+
+/* 아이폰은 꼬리를 살짝 남기고 크게 둥글다 */
+[data-os="ios"] .bubble { border-radius: 19px; padding: 7px 14px; }
+[data-os="ios"] .row.mine .bubble { border-bottom-right-radius: 6px; }
+[data-os="ios"] .row:not(.mine) .bubble { border-bottom-left-radius: 6px; }
+
+/* 안드로이드는 네 귀 중 하나만 각지게 깎는다 */
+[data-os="android"] .bubble { border-radius: 18px; }
+[data-os="android"] .row.mine .bubble { border-top-right-radius: 5px; }
+[data-os="android"] .row:not(.mine) .bubble { border-top-left-radius: 5px; }
 
 .meta { font-size: 10px; color: var(--faint); display: flex; align-items: center; gap: 3px; white-space: nowrap; }
 .meta .wait, .meta .fail { font-size: 9.5px; }
@@ -140,17 +224,28 @@ h1 { font-size: 19px; margin: 0; }
 
 .composer {
   display: flex; align-items: center; gap: 7px;
-  padding: 8px 11px 13px; border-top: 1px solid var(--border); flex: none;
+  padding: 8px 11px 30px; border-top: 1px solid var(--border); flex: none;
 }
 .composer .tool { background: none; border: 0; padding: 3px; cursor: pointer; color: var(--muted); display: grid; place-items: center; }
 .composer input {
   flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 8px 14px;
-  border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  color: var(--text);
 }
 .composer .send {
-  width: 33px; height: 33px; border-radius: 17px; border: 0; cursor: pointer;
+  width: 33px; height: 33px; border: 0; cursor: pointer;
   background: var(--me); color: var(--me-text); display: grid; place-items: center; flex: none;
 }
+
+/* 아이폰: 테두리만 있는 알약. 안드로이드: 속이 찬 칸 */
+[data-os="ios"] .composer input {
+  border-radius: 999px; border: 1px solid var(--border); background: transparent;
+}
+[data-os="ios"] .composer .send { border-radius: 17px; }
+
+[data-os="android"] .composer input {
+  border-radius: 24px; border: 0; background: var(--surface);
+}
+[data-os="android"] .composer .send { border-radius: 11px; }
 
 .connecting {
   flex: 1; display: flex; flex-direction: column; align-items: center;
@@ -161,13 +256,29 @@ h1 { font-size: 19px; margin: 0; }
 .connecting p { font-size: 13px; color: var(--muted); margin: 0; white-space: pre-line; }
 .connecting .action {
   margin-top: 4px; font: inherit; font-size: 13px; font-weight: 600;
-  padding: 10px 20px; border-radius: 999px; border: 0; cursor: pointer;
+  padding: 10px 20px; border: 0; cursor: pointer;
   background: var(--me); color: var(--me-text);
 }
-.phasetag {
-  position: absolute; bottom: 12px; font-size: 10px; color: var(--faint);
-  font-family: ui-monospace, monospace; letter-spacing: .3px;
+[data-os="ios"] .connecting .action { border-radius: 13px; }
+[data-os="android"] .connecting .action { border-radius: 999px; }
+
+/*
+  글꼴도 갈린다.
+  아이폰은 San Francisco, 안드로이드는 Roboto 가 기본이다.
+  맥에서는 Roboto 가 없을 수 있어 비슷한 것으로 물러난다.
+*/
+[data-os="ios"] .screen {
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  letter-spacing: -.2px;
 }
+[data-os="android"] .screen {
+  font-family: Roboto, "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+.phases {
+  padding: 8px 14px; font-size: 11px; color: var(--faint);
+  border-top: 1px solid var(--border); flex: none;
+}
+.phases code { color: var(--muted); font-family: ui-monospace, monospace; }
 
 .drawer { border-top: 1px solid var(--border); background: var(--surface); padding: 9px 0; flex: none; }
 .drawer .head { display: flex; justify-content: space-between; padding: 0 14px 5px; font-size: 11.5px; color: var(--muted); }
@@ -207,23 +318,32 @@ svg { display: block; }
 <div class="stage">
   <div class="phone-wrap">
     <div class="phone-label">내 폰 · <b>안드로이드</b> · 핫스팟을 연다</div>
-    <div class="phone"><div class="notch"></div><div class="screen" id="screen-host"></div></div>
+    <div class="phone" data-os="android">
+      <div class="camera"></div>
+      <div class="screen" id="screen-host"></div>
+      <div class="navbar"><i></i><i></i><i></i></div>
+    </div>
   </div>
 
   <div id="netlog-slot"></div>
 
   <div class="phone-wrap">
     <div class="phone-label">여자친구 폰 · <b>아이폰</b> · 들어간다</div>
-    <div class="phone"><div class="notch"></div><div class="screen" id="screen-guest"></div></div>
+    <div class="phone" data-os="ios">
+      <div class="island"></div>
+      <div class="screen" id="screen-guest"></div>
+      <div class="navbar"><b></b></div>
+    </div>
   </div>
 </div>
 
 <p class="legend">
-  <b>핫스팟 켜기 → Wi-Fi 에 들어가기 → 상대 찾아 잇기</b> 순서로 눌러보세요.
-  그다음 아무 쪽에나 글을 쓰면 실제로 봉투가 만들어져 건너갑니다.
+  <b>핫스팟 켜기 → Wi-Fi 에 들어가기</b> 순서로 눌러보세요.
+  <b>서로 찾아 붙는 건 앱이 알아서 합니다.</b> 앱에는 그런 버튼이 없어요.
+  이어지면 아무 쪽에나 글을 쓰면 실제로 봉투가 만들어져 건너갑니다.
   <br>
-  <code>신호 끊기</code> 로 끊고 글을 쓴 뒤 <code>다시 잇기</code> 를 누르면
-  <b>놓친 말을 되찾는 것</b>까지 진짜로 돕니다.
+  <code>멀어지기</code> 로 신호를 끊고 글을 쓴 뒤 <code>돌아오기</code> 를 누르면
+  저절로 다시 붙으면서 <b>놓친 말을 되찾는 것</b>까지 진짜로 돕니다.
 </p>
 
 <script type="module" src="./app.js"></script>

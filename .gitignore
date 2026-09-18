@@ -37,6 +37,7 @@ build/
 
 # 데모를 묶은 결과물 (pnpm demo 로 다시 만든다)
 demo/app.js
+demo/favicon.svg
 
 # 테스트
 coverage/

@@ -13,7 +13,7 @@ import {
   shapeWhileSpeaking,
   smoothLevel,
 } from './expressions'
-import { paletteWithFade } from './palettes'
+import { grayPalette, paletteWithFade } from './palettes'
 
 /**
  * 캐릭터.
@@ -27,7 +27,13 @@ import { paletteWithFade } from './palettes'
  */
 
 interface CharacterProps {
-  id: CharacterId
+  /**
+   * 누구인가.
+   *
+   * **`null` 이면 아직 모른다.** 한 번도 안 이어졌으면 상대가 무엇을
+   * 골랐는지 알 길이 없다. 그때 아무 캐릭터나 그리면 거짓말이 된다.
+   */
+  id: CharacterId | null
   expression: Expression
   /** 말할 때 소리 크기. 0에서 1 사이 */
   level?: number
@@ -35,6 +41,53 @@ interface CharacterProps {
 }
 
 export function Character({ id, expression, level = 0, size = 160 }: CharacterProps) {
+  if (id === null) return <UnknownPeer size={size} />
+  return <KnownCharacter id={id} expression={expression} level={level} size={size} />
+}
+
+/**
+ * 아직 누군지 모를 때.
+ *
+ * 인사(`hello`)를 주고받아야 상대가 고른 캐릭터를 안다. 그전에는
+ * 얼굴 없는 그림자로 둔다. **자리는 지키되 누구인 척은 하지 않는다.**
+ */
+function UnknownPeer({ size }: { size: number }) {
+  const theme = useTheme()
+  const palette = grayPalette(theme.mode)
+
+  return (
+    <View accessibilityLabel="아직 누구인지 모름">
+      <Svg width={size} height={size} viewBox="0 0 120 120">
+        {/* 어깨와 머리. 캐릭터와 같은 자리에 둬야 바뀔 때 안 흔들린다 */}
+        <Path d="M22 120c0-16 17-27 38-27s38 11 38 27z" fill={palette.clothing} />
+        <Rect x={52} y={78} width={16} height={16} fill={palette.skinShade} />
+        <Ellipse cx={60} cy={56} rx={30} ry={33} fill={palette.skin} />
+
+        {/* 물음표. 얼굴 대신이다 */}
+        <Path
+          d="M50 47a10 10 0 1 1 10 10v7"
+          stroke={palette.line}
+          strokeWidth={5}
+          strokeLinecap="round"
+          fill="none"
+        />
+        <Circle cx={60} cy={73} r={3.2} fill={palette.line} />
+      </Svg>
+    </View>
+  )
+}
+
+function KnownCharacter({
+  id,
+  expression,
+  level,
+  size,
+}: {
+  id: CharacterId
+  expression: Expression
+  level: number
+  size: number
+}) {
   const theme = useTheme()
   const reducedMotion = useReducedMotion()
 

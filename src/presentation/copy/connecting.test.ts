@@ -52,8 +52,72 @@ describe('오래 걸릴 때 덧붙이는 도움말', () => {
     const hint = longHintFor('host', '지민', ours)
     const text = hint.lines.join('\n')
 
-    expect(text).toContain('지민')
-    expect(text).not.toContain('{peer}')
+    expect(text).toContain('지민님은')
+    expect(text).not.toContain('{peer')
+  })
+
+  it('상대를 모르면 이름 자리를 "상대" 로 채운다', () => {
+    const host = longHintFor('host', null, ours).lines.join('\n')
+    const guest = longHintFor('guest', null, ours).lines.join('\n')
+
+    expect(host).toContain('상대는')
+    expect(guest).toContain('상대 쪽에서')
+    expect(`${host}\n${guest}`).not.toContain('{peer')
+  })
+})
+
+/**
+ * 상대 이름은 인사를 주고받아야 안다.
+ *
+ * **첫 연결 전에는 모른다.** 그런데 이 화면은 바로 그때 뜬다.
+ * 예전에는 아무 이름이나 끼워 넣어서, 여자친구가 한 번도 말한 적 없는
+ * 이름이 자기 화면에 떴다. 모를 때는 모른다고 적는다.
+ */
+describe('상대를 아직 모를 때', () => {
+  const phases = [
+    'need-hotspot',
+    'waiting-for-peer',
+    'need-wifi',
+    'looking',
+    'found',
+    'joining',
+    'recovering',
+  ] as const
+
+  it.each(phases)('%s 단계에 이름 자리를 비워두지 않는다', phase => {
+    const copy = copyFor(phase, null, ours)
+    const text = `${copy.title}\n${copy.detail}`
+
+    expect(text).not.toContain('undefined')
+    expect(text).not.toContain('null')
+    expect(text.length).toBeGreaterThan(0)
+  })
+
+  it.each(phases)('%s 단계에 조사가 어긋나지 않는다', phase => {
+    // "상대이" · "상대은" · "상대을" 은 한국어가 아니다.
+    const copy = copyFor(phase, null, ours)
+    const text = `${copy.title}\n${copy.detail}`
+
+    for (const broken of ['상대이', '상대은', '상대을']) {
+      expect(text).not.toContain(broken)
+    }
+  })
+
+  it('이름을 알면 "님" 을 붙이고 조사를 맞춘다', () => {
+    expect(copyFor('need-hotspot', '지민', ours).detail).toContain('지민님이')
+    expect(copyFor('found', '지민', ours).title).toBe('지민님을 찾았어요')
+  })
+
+  it('이름을 모르면 "님" 을 붙이지 않는다', () => {
+    // "상대님" 은 사람을 부르는 말이 아니다.
+    expect(copyFor('need-hotspot', null, ours).detail).toContain('상대가')
+    expect(copyFor('found', null, ours).title).toBe('상대를 찾았어요')
+    expect(copyFor('need-hotspot', null, ours).detail).not.toContain('상대님')
+  })
+
+  it('빈 이름을 받아도 모르는 것으로 본다', () => {
+    // 인사는 받았는데 이름이 비었다. "님이" 만 떠 있으면 안 된다.
+    expect(copyFor('need-hotspot', '', ours).detail).toContain('상대가')
   })
 })
 

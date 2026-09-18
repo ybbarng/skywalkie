@@ -27,7 +27,7 @@ import { Text } from '../Text'
 interface VideoStageProps {
   localUrl: string | null
   remoteUrl: string | null
-  peerCharacter: CharacterId
+  peerCharacter: CharacterId | null
   myCharacter: CharacterId
   /** 상대가 영상을 끄고 있나 */
   peerVideoOff: boolean
@@ -92,7 +92,7 @@ function Surface({
   fill,
 }: {
   url: string | null
-  character: CharacterId
+  character: CharacterId | null
   size: number
   fill?: boolean
 }) {

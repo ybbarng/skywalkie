@@ -26,7 +26,8 @@ import { VideoStage } from './VideoStage'
 interface CallOverlayProps {
   state: CallState
   peerName: string
-  peerCharacter: CharacterId
+  /** 통화는 이어져야 걸리니 보통 안다. 그래도 모를 때를 허용한다 */
+  peerCharacter: CharacterId | null
   myCharacter: CharacterId
   localUrl: string | null
   remoteUrl: string | null
