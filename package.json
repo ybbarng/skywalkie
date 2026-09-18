@@ -28,7 +28,8 @@
     "check:tokens": "tsx scripts/check-tokens.ts",
     "verify": "pnpm lint && pnpm typecheck && pnpm check:deps && pnpm check:tokens && pnpm test",
     "build:android": "pnpm icons:generate && JAVA_HOME=$(/usr/libexec/java_home -v 17) expo run:android --variant release --no-bundler",
-    "apk": "JAVA_HOME=$(/usr/libexec/java_home -v 17) sh -c \"cd android && ./gradlew assembleRelease\""
+    "apk": "JAVA_HOME=$(/usr/libexec/java_home -v 17) sh -c \"cd android && ./gradlew assembleRelease\"",
+    "release": "tsx scripts/release.ts"
   },
   "dependencies": {
     "expo": "~57.0.21",
