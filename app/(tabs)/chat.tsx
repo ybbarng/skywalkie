@@ -1,7 +1,7 @@
 import Constants from 'expo-constants'
 import { router } from 'expo-router'
-import { useCallback, useEffect, useRef } from 'react'
-import { FlatList, KeyboardAvoidingView, Platform, View } from 'react-native'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AppState, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { createContainer, currentContainer } from '@/composition/container'
 import type { Message } from '@/domain/message/Message'
@@ -110,11 +110,22 @@ export default function Chat() {
     void transport.reconnectNow?.()
   })
 
-  // 화면에 보이는 동안 읽음으로 친다
+  // 아직 안 읽은 상대 메시지가 몇 건인가.
+  //
+  // **이 수가 바뀔 때마다 읽음으로 친다.** 예전에는 화면을 켤 때
+  // 한 번만 했는데, 그러면 보고 있는 동안 새로 온 것이 읽음으로
+  // 안 바뀌어 상대 쪽에 ✓✓ 가 영영 안 떴다.
+  //
+  // 건수를 세는 이유는 `messages` 를 그대로 보면 글자 하나 바뀐
+  // 것에도 다시 돌기 때문이다. 다 읽으면 0 이 되어 저절로 멎는다.
+  const unread = useUnreadCount(messages, me)
+  const appActive = useAppActive()
+
   useEffect(() => {
-    if (!ready) return
+    // 앱이 뒤에 있으면 읽은 게 아니다. 알림만 보고 안 열었을 수 있다.
+    if (!ready || !appActive || unread === 0) return
     void markVisibleAsRead()
-  }, [ready, markVisibleAsRead])
+  }, [ready, appActive, unread, markVisibleAsRead])
 
   const renderItem = useCallback(
     ({ item, index }: { item: Message; index: number }) => {
@@ -125,8 +136,16 @@ export default function Chat() {
       const grouped = previous !== undefined && previous.author === item.author
       const showTime = next === undefined || next.author !== item.author
 
+      // 날이 바뀌면 사이에 날짜를 넣는다. 비행기가 날짜선을 넘거나
+      // 밤 비행이면 어제 말과 오늘 말이 붙어 버린다.
+      const showDate =
+        previous === undefined || !isSameDay(previous.orderedAt(), item.orderedAt())
+
       return (
-        <MessageBubble message={item} me={me} grouped={grouped} showTime={showTime} />
+        <>
+          {showDate && <DateDivider at={item.orderedAt()} />}
+          <MessageBubble message={item} me={me} grouped={grouped} showTime={showTime} />
+        </>
       )
     },
     [me, messages],
@@ -203,6 +222,78 @@ export default function Chat() {
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
+  )
+}
+
+/** 아직 안 읽은 상대 메시지 수. 다 읽으면 0 이 되어 읽음 처리가 멎는다 */
+function useUnreadCount(messages: readonly Message[], me: PeerId | null): number {
+  if (me === null) return 0
+
+  let count = 0
+  for (const message of messages) {
+    if (!message.isMine(me) && message.delivery !== 'read') count += 1
+  }
+  return count
+}
+
+/** 앱이 앞에 있나. 뒤에 있는 동안 읽었다고 치면 안 된다 */
+function useAppActive(): boolean {
+  const [active, setActive] = useState(AppState.currentState === 'active')
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', next => {
+      setActive(next === 'active')
+    })
+    return () => subscription.remove()
+  }, [])
+
+  return active
+}
+
+/**
+ * 날짜 구분선.
+ *
+ * 밤 비행이거나 날짜선을 넘으면 어제 말과 오늘 말이 그냥 붙어 버린다.
+ * 나중에 대화를 다시 볼 때 언제 한 말인지 알 수 없다.
+ */
+function DateDivider({ at }: { at: Date }) {
+  const theme = useTheme()
+
+  return (
+    <View style={{ alignItems: 'center', marginVertical: theme.spacing.lg }}>
+      <View
+        style={{
+          backgroundColor: theme.colors.surface,
+          borderRadius: theme.radius.pill,
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: 4,
+        }}
+      >
+        <Text variant="caption" color="textMuted">
+          {formatDay(at)}
+        </Text>
+      </View>
+    </View>
+  )
+}
+
+function formatDay(at: Date): string {
+  const today = new Date()
+  if (isSameDay(at, today)) return '오늘'
+
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  if (isSameDay(at, yesterday)) return '어제'
+
+  const weekday = ['일', '월', '화', '수', '목', '금', '토'][at.getDay()]
+  return `${at.getMonth() + 1}월 ${at.getDate()}일 ${weekday}요일`
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
   )
 }
 
