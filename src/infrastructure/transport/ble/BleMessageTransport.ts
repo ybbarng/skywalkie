@@ -25,7 +25,8 @@ import { Reassembler } from './chunk/Reassembler'
  * Wi-Fi 는 집에서 준비하고 시험할 때 쓴다.
  *
  * 역할은 **여는 쪽이 알리고 붙는 쪽이 찾는다.** 운영체제로 가르지 않는다.
- * 왜 그런지는 `role` 에 적어뒀다.
+ * 왜 그런지는 `preferredRole` 에 적어뒀다.
+ * 그쪽이 안 되면 **반대로 돌아선다**(`connect`).
  *
  * ## 글만 간다
  *
@@ -57,6 +58,14 @@ export class BleMessageTransport implements MessageTransport {
   private mtu = CONSERVATIVE_MTU
 
   /**
+   * 지금 맡고 있는 쪽. 붙고 나서 끊을 때 어느 쪽을 정리할지 가른다.
+   *
+   * 처음에는 제자리(`preferredRole`)로 시작하지만 **안 되면 반대로
+   * 돌아선다.** 그래서 고정값이 아니다.
+   */
+  private role: 'advertiser' | 'scanner'
+
+  /**
    * 핫스팟을 열던 쪽(안드로이드)이 알리고, 들어가던 쪽(아이폰)이 찾는다.
    *
    * **운영체제로 정하지 않는다.** 예전에는 `Platform.OS` 로 갈라서
@@ -68,19 +77,70 @@ export class BleMessageTransport implements MessageTransport {
    * 맡은 역할로 가르면 둘 다 풀린다. 여는 쪽은 뒤에서도 계속 알릴 수
    * 있고(앞쪽 알림), 붙는 쪽은 뒤에서도 정해둔 서비스 번호로 찾을 수 있다.
    */
-  private get role(): 'advertiser' | 'scanner' {
+  private get preferredRole(): 'advertiser' | 'scanner' {
     return this.linkRole === 'host' ? 'advertiser' : 'scanner'
   }
 
-  constructor(private readonly linkRole: ConnectionRole) {}
+  constructor(private readonly linkRole: ConnectionRole) {
+    this.role = this.preferredRole
+  }
 
+  /**
+   * 붙어본다. 제자리로 먼저, 안 되면 반대로.
+   *
+   * ## 왜 둘을 동시에 하지 않나
+   *
+   * 양쪽이 동시에 알리고 동시에 찾으면 **연결이 두 개 생길 수 있다.**
+   * 내 쪽에서 상대로 하나, 상대 쪽에서 나로 하나. 그러면 같은 말이 두 번
+   * 오가고 어느 쪽을 끊어야 할지도 애매해진다. 비행기에서 이런 것이
+   * 꼬이면 손쓸 수 없다.
+   *
+   * 차례로 하면 얻는 것은 같다. 길이 둘이고, 한 번에 하나만 산다.
+   *
+   * ## 반대로 돌아서는 것이 언제 쓸모 있나
+   *
+   * 알리는 장치가 없는 안드로이드가 있다. 아이폰도 다른 앱이 이미
+   * 알리고 있으면 자리를 못 잡는다. 그때 **가만히 있는 대신 반대쪽을
+   * 해본다.** 상대가 마침 그 반대를 하고 있으면 만난다.
+   */
   async connect(): Promise<Result<void, DomainError>> {
     this.moveTo(this.state.startSearching())
 
-    return this.role === 'advertiser' ? this.advertise() : this.scan()
+    const first = await this.open(this.preferredRole)
+    if (first.ok) return first
+
+    const other = this.preferredRole === 'advertiser' ? 'scanner' : 'advertiser'
+    const second = await this.open(other)
+
+    // 둘 다 안 되면 **먼저 시도한 쪽의 까닭**을 올린다. 그쪽이 제자리라
+    // 화면에 띄울 말로도 맞다.
+    return second.ok ? second : first
+  }
+
+  private async open(as: 'advertiser' | 'scanner'): Promise<Result<void, DomainError>> {
+    this.role = as
+    const opened = as === 'advertiser' ? await this.advertise() : await this.scan()
+
+    // **실패하면 반쯤 열린 것을 반드시 닫는다.** 안 닫고 반대쪽을
+    // 시작하면 두 역할이 겹쳐서 무전기가 서로를 방해한다.
+    if (!opened.ok) await this.teardown()
+
+    return opened
   }
 
   async disconnect(): Promise<void> {
+    await this.teardown()
+    this.moveTo(this.state.stop())
+  }
+
+  /**
+   * 열어둔 것을 전부 닫는다. **상태는 안 건드린다.**
+   *
+   * 끊을 때도 쓰고, 한쪽으로 붙어보다 실패해서 반대쪽으로 돌아설 때도
+   * 쓴다. 뒤엣경우에는 아직 "끊김" 이 아니라 "찾는 중" 이라 상태를
+   * 바꾸면 화면이 깜빡인다.
+   */
+  private async teardown(): Promise<void> {
     for (const subscription of this.subscriptions) {
       try {
         subscription.remove()
@@ -105,7 +165,6 @@ export class BleMessageTransport implements MessageTransport {
 
     this.device = null
     this.manager = null
-    this.moveTo(this.state.stop())
   }
 
   async send(envelope: Envelope): Promise<Result<void, DomainError>> {
@@ -153,7 +212,7 @@ export class BleMessageTransport implements MessageTransport {
     return LinkQuality.unknown('ble')
   }
 
-  /** 아이폰: 자기를 알린다 */
+  /** 알리는 쪽을 맡는다. 상대가 찾아오기를 기다린다 */
   private async advertise(): Promise<Result<void, DomainError>> {
     const peripheral = loadBlePeripheral()
     if (!peripheral.available) {
@@ -187,7 +246,7 @@ export class BleMessageTransport implements MessageTransport {
     }
   }
 
-  /** 안드로이드: 상대를 찾는다 */
+  /** 찾는 쪽을 맡는다. 알리고 있는 상대를 뒤진다 */
   private async scan(): Promise<Result<void, DomainError>> {
     // **묻는 것이 먼저다.** 권한 없이 찾기를 시작하면 오류도 안 나고
     // 결과만 영영 안 온다. 그러면 "상대를 못 찾았다" 로만 보인다.
