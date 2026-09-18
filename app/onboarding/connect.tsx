@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { Linking, Platform, View } from 'react-native'
 import { homeHotspot } from '@/composition/hotspot'
+import { notifier } from '@/composition/services'
 import { formatForDisplay, pairingCode } from '@/domain/peer/PairingCode'
 import { Button } from '@/presentation/components/Button'
 import { Card } from '@/presentation/components/Card'
@@ -8,6 +9,7 @@ import { HelpTip } from '@/presentation/components/HelpTip'
 import { Icon } from '@/presentation/components/Icon'
 import { StepLayout } from '@/presentation/components/onboarding/StepLayout'
 import { Text } from '@/presentation/components/Text'
+import { notificationReason } from '@/presentation/copy/notify'
 import { connectIntro, connectSteps, roleReason } from '@/presentation/copy/onboarding'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
 import { useTheme } from '@/presentation/theme/ThemeProvider'
@@ -33,7 +35,14 @@ export default function Connect() {
       title={role === 'host' ? '내가 이어줄게요' : '상대에게 들어갈게요'}
       description={`${roleReason[role]}.`}
       onPrimary={() => {
-        void finishOnboarding().then(() => router.replace('/(tabs)/chat'))
+        void (async () => {
+          // **여기서 알림 권한을 물어본다.** 대화 화면에서 갑자기
+          // 물으면 무슨 일인가 싶다. 안내를 끝내는 지금이 자연스럽다.
+          // 거절해도 그냥 넘어간다.
+          await notifier.prepare()
+          await finishOnboarding()
+          router.replace('/(tabs)/chat')
+        })()
       }}
       primaryLabel="시작하기"
     >
@@ -76,6 +85,18 @@ export default function Connect() {
       </View>
 
       <HotspotCard role={role} />
+
+      <Card>
+        <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+          <Icon name="alert" size={18} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="bodyStrong">알림을 켜주세요</Text>
+            <Text variant="caption" color="textMuted">
+              {notificationReason} 시작하기를 누르면 물어봐요.
+            </Text>
+          </View>
+        </View>
+      </Card>
 
       {profile !== null && <PairingCodeCard code={profile.pairingCode} role={role} />}
     </StepLayout>
