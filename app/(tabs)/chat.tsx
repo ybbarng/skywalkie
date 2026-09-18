@@ -28,6 +28,7 @@ import { Text } from '@/presentation/components/Text'
 import { myBatteryNote, peerBatteryNote } from '@/presentation/copy/battery'
 import { useBatteryWatch } from '@/presentation/hooks/useBatteryWatch'
 import { useKeepAwake } from '@/presentation/hooks/useKeepAwake'
+import { useLinkNotifications } from '@/presentation/hooks/useLinkNotifications'
 import { useMessageNotifications } from '@/presentation/hooks/useMessageNotifications'
 import { useNetworkWatch } from '@/presentation/hooks/useNetworkWatch'
 import { useReconnectOnForeground } from '@/presentation/hooks/useReconnectOnForeground'
@@ -177,6 +178,20 @@ export default function Chat() {
     me,
     peerName: peerLabel(peer, profile?.peerNickname),
     messages,
+  })
+
+  // 끊긴 채로 오래 있으면 잠금 화면에 알린다.
+  //
+  // **주머니에 넣어두면 끊긴 줄도 모른다.** 그동안 상대는 내 말을
+  // 못 받는다. 특히 핫스팟이 꺼진 것은 사람이 켜야 풀리므로 더 빨리
+  // 알린다. 앱이 잠들면 이것도 멈춘다. 그건 막을 수 없다.
+  useLinkNotifications({
+    enabled: ready,
+    role: profile?.role ?? 'host',
+    connected,
+    onOurNetwork: onOurNetwork(profile?.role ?? 'host', network),
+    everConnected,
+    peerName: peerName(peer, profile?.peerNickname),
   })
 
   // 비상용 웹 채팅.

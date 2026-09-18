@@ -78,6 +78,22 @@ export class LocalNotifier {
           vibrationPattern: [0, 80, 120, 80],
           enableVibrate: true,
         })
+
+        /**
+         * 연결 알림은 통로를 따로 둔다.
+         *
+         * **메시지 알림을 꺼도 이건 남아야 한다.** 핫스팟이 꺼진 것을
+         * 모르면 메시지가 아예 안 오는데, 그때 알림까지 꺼져 있으면
+         * 상대가 조용한 것인지 끊긴 것인지 알 길이 없다.
+         *
+         * 진동도 더 길게 준다. 주머니에서도 알아채야 한다.
+         */
+        await loaded.module.setNotificationChannelAsync('link', {
+          name: '연결 상태',
+          importance: loaded.module.AndroidImportance?.HIGH ?? 4,
+          vibrationPattern: [0, 200, 150, 200],
+          enableVibrate: true,
+        })
       }
 
       const existing = await loaded.module.getPermissionsAsync()
@@ -99,7 +115,11 @@ export class LocalNotifier {
    * `null` 로 예약하면 **곧바로** 뜬다. 시간을 재는 것이 아니라
    * 이미 받은 것을 알리는 것이라 기다릴 이유가 없다.
    */
-  async show(title: string, body: string): Promise<void> {
+  async show(
+    title: string,
+    body: string,
+    channel: 'messages' | 'link' = 'messages',
+  ): Promise<void> {
     if (!this.allowed || body.length === 0) return
 
     const loaded = load()
@@ -110,8 +130,10 @@ export class LocalNotifier {
         content: {
           title,
           body,
-          sound: false,
-          ...(Platform.OS === 'android' ? { channelId: 'messages' } : {}),
+          // 연결이 끊긴 것은 소리까지 내서 알린다. 주머니에 있으면
+          // 진동만으로는 놓친다.
+          sound: channel === 'link',
+          ...(Platform.OS === 'android' ? { channelId: channel } : {}),
         },
         trigger: null,
       })

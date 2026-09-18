@@ -1,0 +1,57 @@
+import type { LinkNotice } from '../stores/linkNotice'
+import type { Role } from './connecting'
+import { asSubject } from './josa'
+
+/**
+ * 연결이 끊겼을 때 잠금 화면에 띄우는 글.
+ *
+ * **폰을 주머니에 넣은 사람이 읽는다.** 화면을 보고 있지 않으니
+ * 제목만 보고도 무엇을 해야 하는지 알아야 한다.
+ *
+ * 핫스팟이 꺼진 것은 **사람이 켜야 풀린다.** 그래서 "무슨 일이
+ * 있었다" 가 아니라 "무엇을 눌러라" 로 적는다.
+ *
+ * 역할마다 할 일이 다르다. 여는 쪽은 핫스팟을 켜야 하고 붙는 쪽은
+ * Wi-Fi 에 다시 들어가야 한다. 남의 할 일을 적어두면 찾다가 지친다.
+ */
+
+export interface LinkAlert {
+  readonly title: string
+  readonly body: string
+}
+
+export function alertFor(
+  notice: LinkNotice['kind'],
+  role: Role,
+  peerName: string | null,
+): LinkAlert | null {
+  const who = asSubject(peerName === null || peerName.length === 0 ? '상대' : peerName)
+
+  switch (notice) {
+    case 'none':
+      return null
+
+    case 'hotspot-off':
+      return role === 'host'
+        ? {
+            title: '핫스팟이 꺼졌어요',
+            body: `켜야 ${who} 다시 들어올 수 있어요. 비행기 모드를 켜면 같이 꺼져요.`,
+          }
+        : {
+            title: 'Wi-Fi 에서 나왔어요',
+            body: `다시 들어가야 ${who} 보여요. 목록에서 고르기만 하면 돼요.`,
+          }
+
+    case 'lost':
+      return {
+        title: '연결이 끊겼어요',
+        body: '계속 다시 걸고 있어요. 그동안 쓴 말은 사라지지 않아요.',
+      }
+
+    case 'back':
+      return {
+        title: '다시 연결됐어요',
+        body: `${who} 다시 보여요.`,
+      }
+  }
+}
