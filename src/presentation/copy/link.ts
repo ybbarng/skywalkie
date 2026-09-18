@@ -20,6 +20,31 @@ export interface LinkAlert {
   readonly body: string
 }
 
+/**
+ * 앱이 한참 안 돌았을 때 미리 걸어두는 말.
+ *
+ * **"끊겼다" 고 단정하지 않는다.** 앱이 잠든 것뿐일 수도 있다. 다만
+ * 잠들어 있는 동안에는 상대 말이 안 들어오는 것이 사실이라, 열어보라고
+ * 말하는 것까지는 맞다.
+ *
+ * 역할마다 확인할 것이 다르다. 여는 쪽은 핫스팟이 저 혼자 꺼졌을 수
+ * 있고(안드로이드는 붙은 기기가 없으면 얼마 뒤 끈다), 붙는 쪽은
+ * Wi-Fi 에서 밀려났을 수 있다.
+ */
+export function awayReminder(role: Role, peerName: string | null): LinkAlert {
+  const who = asSubject(peerName === null || peerName.length === 0 ? '상대' : peerName)
+
+  return role === 'host'
+    ? {
+        title: '한동안 말이 안 오갔어요',
+        body: `핫스팟이 저 혼자 꺼졌을 수 있어요. 앱을 열면 다시 이어져요.`,
+      }
+    : {
+        title: '한동안 말이 안 오갔어요',
+        body: `앱을 열면 다시 이어져요. 그래야 ${who} 보낸 말이 들어와요.`,
+      }
+}
+
 export function alertFor(
   notice: LinkNotice['kind'],
   role: Role,

@@ -153,12 +153,6 @@ export class LocalNotifier {
    *
    * `null` 로 예약하면 **곧바로** 뜬다. 시간을 재는 것이 아니라
    * 이미 받은 것을 알리는 것이라 기다릴 이유가 없다.
-   */
-  /**
-   * 지금 띄운다.
-   *
-   * `null` 로 예약하면 **곧바로** 뜬다. 시간을 재는 것이 아니라
-   * 이미 받은 것을 알리는 것이라 기다릴 이유가 없다.
    *
    * ## 아이폰은 진동만 따로 못 한다
    *
@@ -191,6 +185,68 @@ export class LocalNotifier {
       })
     } catch {
       // 못 띄웠다. 앱을 열면 메시지는 그대로 있다.
+    }
+  }
+
+  /**
+   * 나중에 뜨도록 미리 걸어둔다.
+   *
+   * **이게 앱이 잠든 뒤에도 알릴 수 있는 유일한 길이다.** 잠들면 우리
+   * 코드가 안 도니 그때 가서 띄울 수는 없다. 대신 살아 있는 동안
+   * "n분 뒤에 이걸 띄워줘" 를 운영체제에 맡겨둔다. 운영체제는 앱이
+   * 자든 꺼졌든 약속한 시각에 띄운다.
+   *
+   * 멀쩡히 돌고 있으면 계속 취소하고 다시 걸어서 영영 안 뜨게 한다.
+   * 우리가 멈추는 순간에만 터진다.
+   *
+   * 못 걸면 `null`. 그래도 앱은 그대로 돈다.
+   */
+  async scheduleIn(
+    seconds: number,
+    title: string,
+    body: string,
+    how: NotifyHow = {},
+  ): Promise<string | null> {
+    if (!this.allowed || body.length === 0) return null
+
+    const loaded = load()
+    if (!loaded.available) return null
+
+    try {
+      const id = await loaded.module.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          sound: how.kind === 'link' || (how.alertMode ?? 'vibrate') === 'sound',
+          ...(Platform.OS === 'android'
+            ? { channelId: channelFor(how.kind ?? 'message', how.alertMode ?? 'vibrate') }
+            : {}),
+        },
+        trigger: {
+          // 라이브러리 버전에 따라 이름이 다르다. 없으면 글자로 넣는다.
+          type:
+            loaded.module.SchedulableTriggerInputTypes?.TIME_INTERVAL ?? 'timeInterval',
+          seconds: Math.max(1, Math.round(seconds)),
+          repeats: false,
+        },
+      })
+
+      return typeof id === 'string' ? id : null
+    } catch {
+      // 못 걸었다. 앱을 열면 대화는 그대로 있다.
+      return null
+    }
+  }
+
+  /** 걸어둔 것을 거둔다. 아직 안 떴을 때만 뜻이 있다 */
+  async cancelScheduled(id: string): Promise<void> {
+    const loaded = load()
+    if (!loaded.available) return
+
+    try {
+      await loaded.module.cancelScheduledNotificationAsync(id)
+    } catch {
+      // 못 거뒀다. 뜨면 "앱을 열어보세요" 라는 말이라 해롭지 않다.
     }
   }
 

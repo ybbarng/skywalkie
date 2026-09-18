@@ -26,6 +26,7 @@ import { TypingIndicator } from '@/presentation/components/chat/TypingIndicator'
 import { Icon } from '@/presentation/components/Icon'
 import { Text } from '@/presentation/components/Text'
 import { myBatteryNote, peerBatteryNote } from '@/presentation/copy/battery'
+import { useAwayReminder } from '@/presentation/hooks/useAwayReminder'
 import { useBatteryWatch } from '@/presentation/hooks/useBatteryWatch'
 import { useKeepAwake } from '@/presentation/hooks/useKeepAwake'
 import { useLinkNotifications } from '@/presentation/hooks/useLinkNotifications'
@@ -185,13 +186,23 @@ export default function Chat() {
   //
   // **주머니에 넣어두면 끊긴 줄도 모른다.** 그동안 상대는 내 말을
   // 못 받는다. 특히 핫스팟이 꺼진 것은 사람이 켜야 풀리므로 더 빨리
-  // 알린다. 앱이 잠들면 이것도 멈춘다. 그건 막을 수 없다.
+  // 알린다. 이건 앱이 살아 있는 동안만 돈다. 잠든 뒤는 아래가 맡는다.
   useLinkNotifications({
     enabled: ready,
     role: profile?.role ?? 'host',
     connected,
     onOurNetwork: onOurNetwork(profile?.role ?? 'host', network),
     everConnected,
+    peerName: peerName(peer, profile?.peerNickname),
+  })
+
+  // 앱이 잠든 뒤에도 알리는 유일한 길.
+  //
+  // **미리 걸어두고 도는 동안 계속 거둔다.** 우리가 멈추면 그때
+  // 터진다. 아이폰이 앱을 잠재워도 운영체제가 대신 띄워준다.
+  useAwayReminder({
+    enabled: ready,
+    role: profile?.role ?? 'host',
     peerName: peerName(peer, profile?.peerNickname),
   })
 

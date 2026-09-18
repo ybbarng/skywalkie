@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alertFor } from '../copy/link'
+import { alertFor, awayReminder } from '../copy/link'
 import {
   decideNotice,
   HOTSPOT_OFF_AFTER_MS,
@@ -136,6 +136,24 @@ describe('잠금 화면에 뜨는 글', () => {
 
   it('알릴 것이 없으면 아무것도 안 만든다', () => {
     expect(alertFor('none', 'host', '지민')).toBeNull()
+  })
+
+  it('한참 손을 놓았을 때는 단정하지 않는다', () => {
+    // 앱이 잠든 것뿐일 수도 있다. "끊겼다" 고 하면 겁만 준다.
+    // 다만 그동안 말이 안 들어오는 건 사실이라 열어보라고는 한다.
+    for (const role of ['host', 'guest'] as const) {
+      const alert = awayReminder(role, '지민')
+
+      expect(alert.title).not.toContain('끊')
+      expect(alert.body).toContain('앱을 열면')
+    }
+  })
+
+  it('여는 쪽에는 핫스팟이 저 혼자 꺼졌을 수 있다고 알린다', () => {
+    // 안드로이드는 붙은 기기가 없으면 얼마 뒤 핫스팟을 저 혼자 끈다.
+    // 그러면 아이폰이 앱을 열어도 못 들어온다.
+    expect(awayReminder('host', '여자친구').body).toContain('핫스팟')
+    expect(awayReminder('guest', '남자친구').body).not.toContain('핫스팟')
   })
 
   it('쓸 말이 비어 있지 않다', () => {
