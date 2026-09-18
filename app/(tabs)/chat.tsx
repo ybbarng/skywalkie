@@ -369,7 +369,10 @@ export default function Chat() {
           onTyping={typing => sendTyping(typing)}
           onNudge={() => void sendNudgeToPeer()}
           onStickers={() => setStickersOpen(open => !open)}
+          // 누르면 앨범, 길게 누르면 카메라.
+          // 기내식이나 창밖을 바로 찍어 보낼 때가 있다.
           onPhoto={() => void sendPhoto('library')}
+          onCamera={() => void sendPhoto('camera')}
           onDoodle={() => router.push('/doodle')}
           offline={!connected}
         />

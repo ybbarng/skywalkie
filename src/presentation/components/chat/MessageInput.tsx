@@ -12,8 +12,10 @@ interface MessageInputProps {
   onDoodle?(): void
   /** 이모티콘 서랍을 여닫는다 */
   onStickers?(): void
-  /** 사진을 고른다 */
+  /** 앨범에서 사진을 고른다 */
   onPhoto?(): void
+  /** 길게 누르면 카메라를 연다. 지금 찍어 보낼 때 */
+  onCamera?(): void
   /** 끊겨 있으면 알려준다. 입력을 막지는 않는다 */
   offline?: boolean
 }
@@ -31,6 +33,7 @@ export function MessageInput({
   onDoodle,
   onStickers,
   onPhoto,
+  onCamera,
   offline = false,
 }: MessageInputProps) {
   const theme = useTheme()
@@ -72,7 +75,13 @@ export function MessageInput({
       >
         <SideButton icon="alert" label="콕 찌르기" onPress={onNudge} />
         <SideButton icon="heart" label="이모티콘" onPress={onStickers} />
-        <SideButton icon="photo" label="사진" onPress={onPhoto} />
+        <SideButton
+          icon="photo"
+          label="사진"
+          hint="길게 누르면 카메라가 열려요"
+          onPress={onPhoto}
+          onLongPress={onCamera}
+        />
         <SideButton icon="chat" label="낙서" onPress={onDoodle} />
 
         <TextInput
@@ -127,11 +136,15 @@ export function MessageInput({
 function SideButton({
   icon,
   label,
+  hint,
   onPress,
+  onLongPress,
 }: {
   icon: 'alert' | 'chat' | 'heart' | 'photo'
   label: string
+  hint?: string
   onPress?: () => void
+  onLongPress?: () => void
 }) {
   const theme = useTheme()
   if (onPress === undefined) return null
@@ -139,8 +152,10 @@ function SideButton({
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityLabel={label}
+      {...(hint === undefined ? {} : { accessibilityHint: hint })}
       style={{
         width: theme.minTouchSize,
         height: theme.minTouchSize,

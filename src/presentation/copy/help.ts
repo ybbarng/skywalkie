@@ -81,6 +81,16 @@ export const help = {
     title: '콕 찌르기',
     body: '누르면 상대 폰이 짧게 진동해요. 말 없이 부를 때 쓰세요.\n너무 자주 누르지 못하게 3초에 한 번으로 정해두었어요.',
   },
+
+  photo: {
+    title: '사진 보내기',
+    body: '사진 단추를 누르면 앨범이 열려요.\n길게 누르면 카메라가 열립니다. 기내식이나 창밖을 바로 찍어 보낼 때 쓰세요.\n\n보내기 전에 크기를 줄여요. 좁은 길로도 건너가야 하거든요.',
+  },
+
+  sticker: {
+    title: '이모티콘',
+    body: '내가 고른 캐릭터가 자세를 취해요. 누르면 바로 나갑니다.\n길게 누르면 무슨 말인지 위에 떠요. 팔짱 낀 게 "안 돼"인지 "추워"인지 헷갈릴 때 보세요.',
+  },
 } as const satisfies Record<string, HelpEntry>
 
 export type HelpKey = keyof typeof help
