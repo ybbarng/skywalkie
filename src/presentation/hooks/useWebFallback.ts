@@ -70,7 +70,9 @@ export function useWebFallback(input: WebFallbackInput): void {
 
   // 새 말이 생기면 기다리고 있던 사파리를 깨운다.
   // 안 깨우면 최대 25초 뒤에야 뜬다.
+  const count = input.messages.length
   useEffect(() => {
+    if (count === 0) return
     handle.current?.notify()
-  }, [input.messages.length])
+  }, [count])
 }
