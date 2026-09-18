@@ -1,5 +1,6 @@
 import { router } from 'expo-router'
 import { Linking, Platform, View } from 'react-native'
+import { homeHotspot } from '@/composition/hotspot'
 import { formatForDisplay, pairingCode } from '@/domain/peer/PairingCode'
 import { Button } from '@/presentation/components/Button'
 import { Card } from '@/presentation/components/Card'
@@ -64,7 +65,7 @@ export default function Connect() {
                       label="설정 열기"
                       tone="neutral"
                       icon={<Icon name="settings" size={16} />}
-                      onPress={openSettings}
+                      onPress={() => openSettings(role)}
                     />
                   </View>
                 )}
@@ -74,8 +75,67 @@ export default function Connect() {
         ))}
       </View>
 
+      <HotspotCard role={role} />
+
       {profile !== null && <PairingCodeCard code={profile.pairingCode} role={role} />}
     </StepLayout>
+  )
+}
+
+/**
+ * 핫스팟 이름과 비밀번호.
+ *
+ * **붙는 쪽 화면에도 그대로 뜬다.** 그래야 상대 폰을 넘겨다보지 않아도
+ * 혼자 들어갈 수 있다. 길게 누르면 복사되니 비밀번호를 손으로
+ * 옮겨 적을 일도 없다.
+ */
+function HotspotCard({ role }: { role: 'host' | 'guest' }) {
+  const theme = useTheme()
+
+  // `.env` 에 안 적어뒀다. 안내를 접고 예전처럼 상대 화면을 보고 들어간다.
+  if (homeHotspot === null) return null
+
+  return (
+    <Card raised style={{ gap: theme.spacing.sm }}>
+      <Text variant="heading">
+        {role === 'host' ? '내 핫스팟은 이 이름이어야 해요' : '이 Wi-Fi 를 고르세요'}
+      </Text>
+
+      <Field label="이름" value={homeHotspot.ssid} />
+      <Field label="비밀번호" value={homeHotspot.password} />
+
+      <Text variant="caption" color="textMuted">
+        {role === 'host'
+          ? '설정에서 핫스팟 이름이 이것과 다르면 이 이름으로 바꿔주세요. 상대 폰이 이 이름을 찾습니다.'
+          : '길게 누르면 복사돼요. 한 번 들어가두면 폰이 기억해서 다음부터는 저절로 들어갑니다.'}
+      </Text>
+    </Card>
+  )
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  const theme = useTheme()
+
+  return (
+    <View style={{ gap: 2 }}>
+      <Text variant="caption" color="textMuted">
+        {label}
+      </Text>
+
+      <Text
+        variant="bodyStrong"
+        selectable
+        style={{
+          color: theme.colors.me,
+          backgroundColor: theme.colors.surfaceRaised,
+          borderRadius: theme.radius.md,
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: theme.spacing.sm,
+        }}
+      >
+        {value}
+      </Text>
+    </View>
   )
 }
 
@@ -148,9 +208,12 @@ function PairingCodeCard({ code, role }: { code: string; role: 'host' | 'guest' 
  * 설정 화면으로 데려다준다.
  *
  * 앱이 핫스팟을 대신 켜줄 수는 없다. 안드로이드 10부터 막혔다.
- * (docs/02-tech-decisions.md D10)
+ * 데려다주는 데까지가 전부다. (docs/02-tech-decisions.md D10)
+ *
+ * **여는 쪽은 핫스팟 화면으로 바로 보낸다.** 삼성 폰은 핫스팟이
+ * `연결` 아래 묻혀 있어서 Wi-Fi 목록에 떨어뜨리면 못 찾는다.
  */
-function openSettings(): void {
+function openSettings(role: 'host' | 'guest'): void {
   if (Platform.OS === 'ios') {
     void Linking.openURL('App-Prefs:root=WIFI').catch(() => {
       void Linking.openSettings()
@@ -158,7 +221,24 @@ function openSettings(): void {
     return
   }
 
-  void Linking.sendIntent('android.settings.WIRELESS_SETTINGS').catch(() => {
-    void Linking.openSettings()
-  })
+  // 못 여는 기기가 있어서 한 단계씩 물러난다
+  const targets =
+    role === 'host'
+      ? ['android.settings.TETHER_SETTINGS', 'android.settings.WIRELESS_SETTINGS']
+      : ['android.settings.WIFI_SETTINGS', 'android.settings.WIRELESS_SETTINGS']
+
+  void openFirstAvailable(targets)
+}
+
+async function openFirstAvailable(intents: readonly string[]): Promise<void> {
+  for (const intent of intents) {
+    try {
+      await Linking.sendIntent(intent)
+      return
+    } catch {
+      // 다음 것을 해본다
+    }
+  }
+
+  await Linking.openSettings()
 }
