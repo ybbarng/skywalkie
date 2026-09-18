@@ -20,20 +20,16 @@ export default function AudioMode() {
   const theme = useTheme()
   const preferences = useSetupStore(s => s.preferences)
   const chooseAudioMode = useSetupStore(s => s.chooseAudioMode)
-  const finishOnboarding = useSetupStore(s => s.finishOnboarding)
 
   const modes = Object.keys(audioModeChoice) as Array<Preferences['audioMode']>
 
   return (
     <StepLayout
-      step={5}
-      totalSteps={5}
+      step={3}
+      totalSteps={4}
       title="음악 들으면서 대화하려면"
       description="이어폰은 마이크를 켜는 순간 음질이 떨어져요. 어떻게 할지 골라주세요."
-      primaryLabel="이걸로 시작하기"
-      onPrimary={() => {
-        void finishOnboarding().then(() => router.replace('/'))
-      }}
+      onPrimary={() => router.push('/onboarding/connect')}
     >
       <View style={{ gap: theme.spacing.md }}>
         {modes.map(mode => {
@@ -80,7 +76,7 @@ export default function AudioMode() {
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
         <Text variant="caption" color="textFaint">
-          나중에 설정에서 바꿀 수 있어요
+          목소리 기능은 준비 중이에요. 나중에 설정에서 바꿀 수 있어요
         </Text>
         <HelpTip topic="audioMode" size={16} />
       </View>

@@ -19,11 +19,11 @@ export default function ChooseCharacter() {
 
   return (
     <StepLayout
-      step={3}
-      totalSteps={5}
+      step={2}
+      totalSteps={4}
       title="내 캐릭터를 골라요"
       description="여기서 고른 캐릭터가 상대 화면에 나타나요."
-      onPrimary={() => router.push('/onboarding/connect')}
+      onPrimary={() => router.push('/onboarding/audio-mode')}
     >
       <View style={{ alignItems: 'center', paddingVertical: theme.spacing.md }}>
         <Character id={selected} expression="idle" size={150} />

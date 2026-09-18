@@ -37,17 +37,14 @@ export const connectSteps: Record<Role, readonly ConnectStep[]> = {
       detail: '기내에서는 켜야 해요. 집에서 미리 해볼 때도 똑같이 켜보세요.',
     },
     {
-      title: 'Wi-Fi 를 켜요',
-      detail: '비행기 모드를 켠 뒤에도 Wi-Fi 는 따로 켤 수 있어요.',
-    },
-    {
       title: '핫스팟을 켜요',
-      detail: '내 폰이 작은 Wi-Fi 공유기가 돼요. 인터넷이 없어도 두 폰을 이어줍니다.',
+      detail:
+        '내 폰이 작은 Wi-Fi 공유기가 돼요. 인터넷이 없어도 두 폰을 이어줍니다.\n비행기 모드를 켠 뒤에도 따로 켤 수 있어요.',
       opensSettings: true,
     },
     {
-      title: '이 화면을 상대에게 보여줘요',
-      detail: '상대가 이 이름을 목록에서 찾아 비밀번호를 넣으면 됩니다.',
+      title: '핫스팟 이름과 비밀번호를 보여줘요',
+      detail: '설정 화면에 떠 있어요. 상대가 그걸 보고 들어옵니다.',
     },
   ],
   guest: [
@@ -56,32 +53,27 @@ export const connectSteps: Record<Role, readonly ConnectStep[]> = {
       detail: '기내에서는 켜야 해요. 집에서 미리 해볼 때도 똑같이 켜보세요.',
     },
     {
-      title: 'Wi-Fi 를 켜요',
-      detail: '비행기 모드를 켠 뒤에도 Wi-Fi 는 따로 켤 수 있어요.',
-    },
-    {
-      title: '상대 폰 이름을 목록에서 골라요',
-      detail: '상대가 보여주는 화면에 이름과 비밀번호가 크게 떠 있어요.',
+      title: '상대 폰 이름을 Wi-Fi 목록에서 골라요',
+      detail:
+        '상대가 보여주는 화면에 이름과 비밀번호가 떠 있어요.\n비행기 모드를 켠 뒤에도 Wi-Fi 는 따로 켤 수 있어요.',
       opensSettings: true,
     },
     {
-      title: '붙으면 알아서 찾아요',
-      detail: '주소를 입력할 필요 없어요. 앱이 상대를 스스로 찾습니다.',
+      title: '들어가면 알아서 찾아요',
+      detail: '주소를 입력할 일은 없어요. 앱이 상대를 스스로 찾습니다.',
     },
   ],
 }
 
-export const roleChoice = {
-  host: {
-    label: '내가 열어줄게요',
-    detail: '핫스팟을 켜서 둘만의 Wi-Fi 를 만듭니다. 안드로이드 폰이 여기 해당해요.',
-    hint: '배터리를 조금 더 씁니다',
-  },
-  guest: {
-    label: '상대 것에 붙을게요',
-    detail: '상대가 만든 Wi-Fi 에 들어갑니다. 아이폰이 여기 해당해요.',
-    hint: '핫스팟은 아이폰에서 잘 안 돼요',
-  },
+/**
+ * 왜 내가 이 역할인지 한 줄로 알려준다.
+ *
+ * **고르게 하지 않는다.** 아이폰은 앱에서 핫스팟을 켤 수 없어서
+ * 선택지가 실질적으로 하나뿐이다. 물어보면 헷갈림만 는다.
+ */
+export const roleReason = {
+  host: '안드로이드 폰이라 이어주는 쪽을 맡아요',
+  guest: '아이폰이라 들어가는 쪽을 맡아요',
 } as const
 
 export const audioModeChoice = {

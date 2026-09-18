@@ -1,3 +1,4 @@
+import { Platform } from 'react-native'
 import { create } from 'zustand'
 import {
   defaultPreferences,
@@ -25,7 +26,13 @@ interface SetupState {
   preferences: Preferences
 
   load(): Promise<void>
-  chooseRole(role: Profile['role']): Promise<void>
+  /**
+   * 프로필이 없으면 만든다.
+   *
+   * **역할은 기기가 정한다.** 아이폰은 앱에서 핫스팟을 켤 수 없으니
+   * 안드로이드가 여는 쪽, 아이폰이 붙는 쪽이다. 고르게 하면 헷갈림만 는다.
+   */
+  ensureProfile(): Promise<void>
   chooseCharacter(character: CharacterId): Promise<void>
   setDisplayName(displayName: string): Promise<void>
   chooseAudioMode(audioMode: Preferences['audioMode']): Promise<void>
@@ -57,19 +64,20 @@ export const useSetupStore = create<SetupState>((set, get) => ({
     })
   },
 
-  async chooseRole(role) {
-    // 프로필이 없으면 여기서 만든다. 식별자와 코드는 한 번만 만들어
-    // 계속 쓴다. 바뀌면 상대가 우리를 못 알아본다.
-    const current = get().profile
-    const next: Profile = current ?? {
+  async ensureProfile() {
+    if (get().profile !== null) return
+
+    // 식별자와 코드는 한 번만 만들어 계속 쓴다.
+    // 바뀌면 상대가 우리를 못 알아본다.
+    const role: Profile['role'] = Platform.OS === 'ios' ? 'guest' : 'host'
+
+    await persistProfile(set, {
       peerId: makePeerId(),
-      displayName: role === 'host' ? '나' : '나',
+      displayName: '나',
       character: role === 'host' ? 'orion' : 'aria',
       pairingCode: generatePairingCode(Math.random),
       role,
-    }
-
-    await persistProfile(set, { ...next, role })
+    })
   },
 
   async chooseCharacter(character) {

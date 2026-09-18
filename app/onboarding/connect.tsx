@@ -7,7 +7,7 @@ import { HelpTip } from '@/presentation/components/HelpTip'
 import { Icon } from '@/presentation/components/Icon'
 import { StepLayout } from '@/presentation/components/onboarding/StepLayout'
 import { Text } from '@/presentation/components/Text'
-import { connectSteps } from '@/presentation/copy/onboarding'
+import { connectSteps, roleReason } from '@/presentation/copy/onboarding'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
 import { useTheme } from '@/presentation/theme/ThemeProvider'
 
@@ -21,17 +21,20 @@ import { useTheme } from '@/presentation/theme/ThemeProvider'
 export default function Connect() {
   const theme = useTheme()
   const profile = useSetupStore(s => s.profile)
+  const finishOnboarding = useSetupStore(s => s.finishOnboarding)
   const role = profile?.role ?? 'host'
   const steps = connectSteps[role]
 
   return (
     <StepLayout
       step={4}
-      totalSteps={5}
-      title={role === 'host' ? 'Wi-Fi 를 열어주세요' : '상대 Wi-Fi 에 붙어요'}
-      description="순서대로 하면 돼요. 상대가 할 일은 상대 화면에 떠 있어요."
-      onPrimary={() => router.push('/onboarding/permissions')}
-      primaryLabel="다 했어요"
+      totalSteps={4}
+      title={role === 'host' ? '내가 이어줄게요' : '상대에게 들어갈게요'}
+      description={`${roleReason[role]}. 순서대로 하면 돼요.`}
+      onPrimary={() => {
+        void finishOnboarding().then(() => router.replace('/(tabs)/chat'))
+      }}
+      primaryLabel="시작하기"
     >
       <View style={{ gap: theme.spacing.md }}>
         {steps.map((step, index) => (
