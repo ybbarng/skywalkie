@@ -61,6 +61,13 @@ interface ChatState {
   assetPaths: Record<string, string>
   /** 사진을 보내는 중인가. 화면이 버튼을 잠글 때 쓴다 */
   sendingPhoto: boolean
+  /**
+   * 상대 배터리. 0에서 1 사이, 모르면 null.
+   *
+   * 갑자기 조용해졌을 때 **잠든 것인지 폰이 죽은 것인지** 알 수 있어야
+   * 한다.
+   */
+  peerBattery: number | null
   /** 아직 못 보낸 것이 몇 개인가 */
   pendingCount: number
   /** 상대 식별자. 인사하면서 알게 된다 */
@@ -82,6 +89,8 @@ interface ChatState {
   send(text: string): Promise<void>
   sendTyping(typing: boolean): void
   sendNudge(): Promise<void>
+  /** 내 배터리를 상대에게 알린다. 상대가 내 침묵을 이해하게 */
+  shareBattery(level: number): Promise<void>
   /** 내 캐릭터가 자세를 취한다. 자세 이름만 나가서 몇십 바이트다 */
   sendSticker(pose: StickerPose): Promise<void>
   /** 앨범에서 고르거나 찍어 보낸다 */
@@ -302,6 +311,17 @@ export const useChatStore = create<ChatState>((set, get) => {
       return
     }
 
+    if (envelope.t === 'presence') {
+      set({
+        peerTyping: false,
+        peerBattery:
+          typeof envelope.p.batteryLevel === 'number'
+            ? envelope.p.batteryLevel
+            : get().peerBattery,
+      })
+      return
+    }
+
     if (envelope.t === 'typing') {
       set({ peerTyping: envelope.p.typing })
 
@@ -341,6 +361,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     assetProgress: {},
     assetPaths: {},
     sendingPhoto: false,
+    peerBattery: null,
     pendingCount: 0,
     peerId: null,
     codeMismatch: false,
@@ -512,6 +533,27 @@ export const useChatStore = create<ChatState>((set, get) => {
           await refresh()
         }
       })
+    },
+
+    /**
+     * 내 배터리를 알린다.
+     *
+     * **못 보내도 그만이다.** 알림용이라 실패해도 되돌릴 것이 없다.
+     */
+    async shareBattery(level) {
+      const active = deps
+      if (active === null) return
+
+      await active.transport
+        .send({
+          v: PROTOCOL_VERSION,
+          id: ids.next(),
+          seq: 0,
+          ts: systemClock.epochMillis(),
+          t: 'presence',
+          p: { foreground: true, batteryLevel: level },
+        })
+        .catch(() => undefined)
     },
 
     async sendSticker(pose) {

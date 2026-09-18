@@ -1,5 +1,6 @@
 import type { IdGenerator } from '@/domain/shared/IdGenerator'
 import { loadWebRtc } from '@/infrastructure/call/webrtcModule'
+import { LocalNotifier } from '@/infrastructure/platform/LocalNotifier'
 import {
   defaultPreferences,
   type KnownPeer,
@@ -28,6 +29,13 @@ import {
  */
 
 export const ids: IdGenerator = ulidGenerator
+
+/**
+ * 폰을 내려놔도 상대가 말을 걸면 알려준다.
+ *
+ * 하나만 두고 계속 쓴다. 매번 새로 만들면 권한을 다시 물어본다.
+ */
+export const notifier = new LocalNotifier()
 
 export const makePeerId = makePeerIdImpl
 
@@ -76,4 +84,60 @@ export async function startWebChat(
     stop: () => server.stop(),
     notify: () => server.notify(),
   }
+}
+
+/**
+ * 지금 배터리가 얼마나 남았나.
+ *
+ * **비행기에서 폰이 죽으면 대화가 끝난다.** 미리 알면 보조 배터리를
+ * 꽂거나 통화를 접을 수 있다.
+ *
+ * 못 읽으면 `null` 이다. 배터리를 못 읽는다고 앱이 멈출 이유가 없다.
+ */
+export async function readBattery(): Promise<{
+  level: number
+  charging: boolean
+} | null> {
+  try {
+    const battery = require('expo-battery')
+
+    const level = await battery.getBatteryLevelAsync()
+    const state = await battery.getBatteryStateAsync()
+
+    if (typeof level !== 'number' || level < 0) return null
+
+    return {
+      level,
+      // 1 은 충전 중, 2 는 다 참
+      charging: state === 1 || state === 2,
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 화면이 꺼지지 않게 붙든다.
+ *
+ * 통화 중에만 쓴다. 화면이 꺼지면 아이폰이 앱을 재우려 하고, 그러면
+ * 목소리가 끊긴다. 못 붙들어도 통화는 되므로 조용히 넘어간다.
+ */
+export const keepAwake = {
+  async hold(why: string): Promise<void> {
+    try {
+      const module = require('expo-keep-awake')
+      await module.activateKeepAwakeAsync(why)
+    } catch {
+      // 못 붙들었다. 화면이 꺼지면 통화가 끊길 수 있지만 앱은 그대로다.
+    }
+  },
+
+  async release(why: string): Promise<void> {
+    try {
+      const module = require('expo-keep-awake')
+      await module.deactivateKeepAwake(why)
+    } catch {
+      // 이미 풀렸다
+    }
+  },
 }

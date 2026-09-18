@@ -24,6 +24,10 @@ import { StickerPanel } from '@/presentation/components/chat/StickerPanel'
 import { TypingIndicator } from '@/presentation/components/chat/TypingIndicator'
 import { Icon } from '@/presentation/components/Icon'
 import { Text } from '@/presentation/components/Text'
+import { myBatteryNote, peerBatteryNote } from '@/presentation/copy/battery'
+import { useBatteryWatch } from '@/presentation/hooks/useBatteryWatch'
+import { useKeepAwake } from '@/presentation/hooks/useKeepAwake'
+import { useMessageNotifications } from '@/presentation/hooks/useMessageNotifications'
 import { useNetworkWatch } from '@/presentation/hooks/useNetworkWatch'
 import { useReconnectOnForeground } from '@/presentation/hooks/useReconnectOnForeground'
 import { useWebFallback } from '@/presentation/hooks/useWebFallback'
@@ -61,6 +65,8 @@ export default function Chat() {
   const sendNudgeToPeer = useChatStore(s => s.sendNudge)
   const sendSticker = useChatStore(s => s.sendSticker)
   const sendPhoto = useChatStore(s => s.sendPhoto)
+  const shareBattery = useChatStore(s => s.shareBattery)
+  const peerBattery = useChatStore(s => s.peerBattery)
   const assetPaths = useChatStore(s => s.assetPaths)
   const assetProgress = useChatStore(s => s.assetProgress)
   const searchingTooLong = useChatStore(s => s.searchingTooLong)
@@ -144,6 +150,34 @@ export default function Chat() {
     void transport.reconnectNow?.()
   })
 
+  // 통화 중에는 화면이 꺼지지 않게 붙든다.
+  //
+  // 대화할 때는 안 붙든다. 세 시간 내내 화면을 켜두면 배터리가 먼저
+  // 죽고, 그러면 대화 자체가 끝난다.
+  useKeepAwake(call.state.isLive(), '통화 중')
+
+  // 배터리를 지켜보고 상대에게도 알린다.
+  //
+  // **비행기에서 폰이 죽으면 대화가 끝난다.** 상대가 갑자기 조용해졌을
+  // 때 잠든 것인지 폰이 죽은 것인지 알 수 있어야 한다.
+  const battery = useBatteryWatch(ready)
+
+  useEffect(() => {
+    if (!ready || battery.level === null) return
+    void shareBattery(battery.level)
+  }, [ready, battery.level, shareBattery])
+
+  // 폰을 내려놔도 상대가 말을 걸면 알려준다.
+  //
+  // **이게 없으면 앱을 보고 있을 때만 대화가 된다.** 세 시간 동안
+  // 화면만 보고 있을 수는 없다.
+  useMessageNotifications({
+    enabled: ready,
+    me,
+    peerName: peer?.displayName ?? '상대',
+    messages,
+  })
+
   // 비상용 웹 채팅.
   //
   // **핫스팟을 연 쪽만 띄운다.** 붙는 쪽에서 띄워봐야 아무도 못 들어온다.
@@ -221,6 +255,15 @@ export default function Chat() {
       />
 
       {codeMismatch && <CodeMismatchNotice />}
+
+      <BatteryNotice
+        mine={battery.level}
+        charging={battery.charging}
+        peer={peerBattery}
+        peerName={peer?.displayName ?? '상대'}
+        role={profile.role}
+        callActive={call.state.isLive()}
+      />
 
       <PeerHeader
         peerCharacter={peer?.character ?? 'aria'}
@@ -462,6 +505,55 @@ function PeerHeader({
           </Pressable>
         </View>
       )}
+    </View>
+  )
+}
+
+/**
+ * 배터리 안내.
+ *
+ * **늘 띄우지 않는다.** 줄어들었을 때만 나온다. 숫자를 내내 띄워두면
+ * 잔소리가 되고, 정작 급할 때 눈에 안 들어온다.
+ */
+function BatteryNotice({
+  mine,
+  charging,
+  peer,
+  peerName,
+  role,
+  callActive,
+}: {
+  mine: number | null
+  charging: boolean
+  peer: number | null
+  peerName: string
+  role: 'host' | 'guest'
+  callActive: boolean
+}) {
+  const theme = useTheme()
+
+  // 꽂혀 있으면 걱정할 것이 없다
+  const myNote = charging || mine === null ? null : myBatteryNote(mine, role, callActive)
+  const peerNote = peer === null ? null : peerBatteryNote(peer, peerName)
+  const note = myNote ?? peerNote
+
+  if (note === null) return null
+
+  return (
+    <View
+      style={{
+        backgroundColor: theme.colors.surfaceRaised,
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.sm,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.sm,
+      }}
+    >
+      <Icon name="alert" size={14} color="textMuted" />
+      <Text variant="caption" color="textMuted">
+        {note}
+      </Text>
     </View>
   )
 }
