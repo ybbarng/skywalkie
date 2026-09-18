@@ -11,11 +11,51 @@
 | Node.js | 20 이상 | 지금 24.14.1이 깔려 있다 |
 | pnpm | 10 이상 | 지금 10.32.1 |
 | JDK | **17** | React Native 0.86이 요구한다 |
-| Xcode | 16 이상 | 지금 16.2 |
+| Xcode | **26.2** | 아래를 읽는다. 26.3 은 안 된다 |
 | Android SDK | 35 이상 | 이미 설치됨 |
 | CocoaPods | 1.15 이상 | 아이폰 쪽 라이브러리 설치용 |
 
 > **먼저 할 일**: 지금 깔린 JDK가 11이다. React Native 0.86은 17이 필요하므로 안드로이드 빌드 전에 17을 설치해야 한다. `brew install --cask temurin@17` 뒤에 `JAVA_HOME`을 바꾼다.
+
+### 1.1 Xcode 는 26.2 여야 한다 — 위도 아래도 안 된다
+
+**2026-09-18 에 세 가지를 다 겪었다.** 아이폰 빌드를 처음 할 때 여기서 하루를
+날리기 쉬우니 적어둔다.
+
+| Xcode | 결과 |
+|---|---|
+| 16.2 | **너무 낮다.** Expo 가 Swift 6.2 를 요구하고, iOS 26 기기에 설치도 안 된다 |
+| **26.2** | **이걸 쓴다** |
+| 26.3 | **너무 높다.** 컴파일러가 깐깐해져 Expo SDK 57 이 안 넘어간다 |
+
+26.3 에서 나는 오류는 두 종류다. 앞엣것은 아래 패치로 넘어가지만 뒤엣것은 못
+넘어간다.
+
+```
+RuntimeScheduler.h    SWIFT_RETURNS_RETAINED ... not a SWIFT_SHARED_REFERENCE
+JavaScriptRuntime.swift  sending 'argumentsPtr' risks causing data races
+```
+
+뒤엣것을 넘겨보려고 Swift 언어 모드를 5로 낮춰봤지만 **더 나빠졌다.** 전혀 다른
+오류가 새로 난다. Expo 의 동시성 코드를 손대는 것은 **비행기에서 터질 위험을
+만드는 일**이라 하지 않는다.
+
+**App Store 는 26.2 를 안 내준다.** 늘 최신판만 내보내는데 그게 macOS 26 을
+요구하면 아무것도 안 보여준다. [Xcodes](https://github.com/XcodesOrg/XcodesApp)
+같은 도구로 버전을 골라 받거나 developer.apple.com 에서 직접 받는다.
+
+> macOS Sequoia 에서는 Xcode 26.3 이 마지막이다. 26.4 부터 macOS Tahoe 26.2 를
+> 요구한다.
+
+### 1.2 Expo 패치를 하나 들고 있다
+
+`patches/expo-modules-jsi.patch` 는 [expo/expo#49740](https://github.com/expo/expo/pull/49740)
+과 같은 내용이다. 생성자에 붙은 `SWIFT_RETURNS_RETAINED` 두 개를 뗀다. 생성자에는
+원래 의미가 없는 표시이고 클래스 끝의 `SWIFT_SHARED_REFERENCE` 가 이미 소유권을
+정하므로 **동작은 그대로다.**
+
+없으면 Xcode 26.2 에서도 아이폰 빌드가 안 된다. Expo SDK 를 올릴 때 위쪽에서
+고쳐졌는지 확인하고 지운다.
 
 ## 2. 처음 한 번 하는 일
 

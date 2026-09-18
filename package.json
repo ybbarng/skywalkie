@@ -86,6 +86,9 @@
       "esbuild",
       "@biomejs/biome",
       "lefthook"
-    ]
+    ],
+    "patchedDependencies": {
+      "expo-modules-jsi": "patches/expo-modules-jsi.patch"
+    }
   }
 }
