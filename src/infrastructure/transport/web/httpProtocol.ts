@@ -115,6 +115,22 @@ function decode(raw: string): string {
   }
 }
 
+/**
+ * 글자 수로 자르되 이모지를 쪼개지 않는다.
+ *
+ * 이모지는 두 칸을 차지한다. 그 사이에서 자르면 반쪽만 남아
+ * 화면에 깨진 글자가 뜨고 길이 계산도 어긋난다.
+ */
+export function cutAt(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text
+
+  const code = text.charCodeAt(maxLength - 1)
+  // 마지막 글자가 앞쪽 반쪽이면 한 칸 덜 자른다
+  const end = code >= 0xd800 && code <= 0xdbff ? maxLength - 1 : maxLength
+
+  return text.slice(0, end)
+}
+
 export interface HttpResponse {
   readonly status: number
   readonly contentType: string
@@ -150,13 +166,33 @@ export function utf8Length(text: string): number {
   for (let i = 0; i < text.length; i += 1) {
     const code = text.charCodeAt(i)
 
-    if (code < 0x80) bytes += 1
-    else if (code < 0x800) bytes += 2
-    else if (code >= 0xd800 && code <= 0xdbff) {
-      // 이모지 같은 것. 두 칸이 합쳐 네 바이트다.
-      bytes += 4
-      i += 1
-    } else bytes += 3
+    if (code < 0x80) {
+      bytes += 1
+      continue
+    }
+
+    if (code < 0x800) {
+      bytes += 2
+      continue
+    }
+
+    // 이모지 같은 것. 두 칸이 합쳐 네 바이트다.
+    //
+    // **짝이 없으면 세 바이트짜리 물음표 글자가 된다.** 글을 자르다
+    // 이모지 한가운데가 잘리면 반쪽만 남는데, 그걸 네 바이트로 세면
+    // 길이가 어긋난다. 그러면 사파리가 답을 끝까지 못 읽고 멈춘다.
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const low = i + 1 < text.length ? text.charCodeAt(i + 1) : 0
+      if (low >= 0xdc00 && low <= 0xdfff) {
+        bytes += 4
+        i += 1
+      } else {
+        bytes += 3
+      }
+      continue
+    }
+
+    bytes += 3
   }
 
   return bytes
@@ -203,8 +239,10 @@ export function readText(body: string, maxLength = 4000): string | null {
     if (typeof text !== 'string') return null
 
     const trimmed = text.trim()
-    // 막지 않으면 사설망이 통째로 막힌다
-    return trimmed.length === 0 ? null : trimmed.slice(0, maxLength)
+    // 막지 않으면 사설망이 통째로 막힌다.
+    // **이모지 한가운데서 자르지 않는다.** 반쪽만 남으면 길이 계산이
+    // 어긋나 사파리가 답을 끝까지 못 읽는다.
+    return trimmed.length === 0 ? null : cutAt(trimmed, maxLength)
   } catch {
     return null
   }

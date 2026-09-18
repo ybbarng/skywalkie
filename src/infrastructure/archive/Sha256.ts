@@ -39,12 +39,22 @@ export function utf8Bytes(text: string): Uint8Array {
     let code = text.charCodeAt(i)
 
     // 이모지 같은 것은 두 칸에 나뉘어 있다. 붙여서 한 글자로 본다.
-    if (code >= 0xd800 && code <= 0xdbff && i + 1 < text.length) {
-      const low = text.charCodeAt(i + 1)
+    //
+    // **짝이 없으면 물음표 글자로 바꾼다.** 글을 자르다 이모지
+    // 한가운데가 잘리면 반쪽만 남는데, 그걸 그대로 바이트로 만들면
+    // 표준과 다른 값이 나온다. 그러면 요약값이 어긋나 멀쩡한 파일을
+    // 거절하게 된다.
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const low = i + 1 < text.length ? text.charCodeAt(i + 1) : 0
       if (low >= 0xdc00 && low <= 0xdfff) {
         code = (code - 0xd800) * 0x400 + (low - 0xdc00) + 0x10000
         i += 1
+      } else {
+        code = 0xfffd
       }
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      // 뒤쪽 반쪽만 왔다
+      code = 0xfffd
     }
 
     if (code < 0x80) {
