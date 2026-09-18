@@ -11,7 +11,9 @@
   "scripts": {
     "start": "expo start --dev-client",
     "dev:android": "pnpm icons:generate && JAVA_HOME=$(/usr/libexec/java_home -v 17) expo run:android",
-    "dev:ios": "pnpm icons:generate && expo run:ios",
+    "dev:ios": "pnpm icons:generate && expo run:ios --device",
+    "dev:ios:simulator": "pnpm icons:generate && expo run:ios",
+    "build:ios": "pnpm icons:generate && expo run:ios --device --configuration Release --no-bundler",
     "prebuild": "pnpm icons:generate && expo prebuild --clean",
     "icons:generate": "tsx scripts/generate-icons.ts",
     "peer": "tsx scripts/peer-simulator.ts",
