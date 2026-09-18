@@ -20,6 +20,7 @@ import { ConnectionBar } from '@/presentation/components/ConnectionBar'
 import { CallOverlay } from '@/presentation/components/call/CallOverlay'
 import { MessageBubble } from '@/presentation/components/chat/MessageBubble'
 import { MessageInput } from '@/presentation/components/chat/MessageInput'
+import { StickerPanel } from '@/presentation/components/chat/StickerPanel'
 import { TypingIndicator } from '@/presentation/components/chat/TypingIndicator'
 import { Icon } from '@/presentation/components/Icon'
 import { Text } from '@/presentation/components/Text'
@@ -57,6 +58,7 @@ export default function Chat() {
   const markVisibleAsRead = useChatStore(s => s.markVisibleAsRead)
   const sendTyping = useChatStore(s => s.sendTyping)
   const sendNudgeToPeer = useChatStore(s => s.sendNudge)
+  const sendSticker = useChatStore(s => s.sendSticker)
   const searchingTooLong = useChatStore(s => s.searchingTooLong)
   const everConnected = useChatStore(s => s.everConnected)
   const announceDisconnect = useChatStore(s => s.announceDisconnect)
@@ -67,6 +69,7 @@ export default function Chat() {
 
   const call = useCallStore()
   const preferences = useSetupStore(s => s.preferences)
+  const [stickersOpen, setStickersOpen] = useState(false)
 
   // 이어져 있는 동안은 지켜볼 필요가 없다. 핫스팟이 꺼지면 어차피 끊긴다.
   // 끊겼을 때만 보면서 **왜 끊겼는지**를 알아낸다.
@@ -241,10 +244,22 @@ export default function Chat() {
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
         />
 
+        {stickersOpen && (
+          <StickerPanel
+            character={profile.character}
+            onPick={pose => {
+              void sendSticker(pose)
+              setStickersOpen(false)
+            }}
+            onClose={() => setStickersOpen(false)}
+          />
+        )}
+
         <MessageInput
           onSend={text => void send(text)}
           onTyping={typing => sendTyping(typing)}
           onNudge={() => void sendNudgeToPeer()}
+          onStickers={() => setStickersOpen(open => !open)}
           offline={!connected}
         />
       </KeyboardAvoidingView>

@@ -293,3 +293,18 @@ export function paletteWithFade(
 ): CharacterPalette {
   return desaturate >= 0.5 ? grayPalette(mode) : paletteFor(id, mode)
 }
+
+/**
+ * 이모티콘에만 쓰는 색.
+ *
+ * 눈물과 하트는 캐릭터마다 달라질 이유가 없다. 파란 눈물과 빨간
+ * 하트는 누가 봐도 그것이라서, 사람마다 다른 색을 쓰면 오히려 헷갈린다.
+ */
+export const stickerColors = {
+  tear: { dark: '#5CC8FF', light: '#0369A1' },
+  heart: { dark: '#F87171', light: '#DC2626' },
+} as const
+
+export function stickerColor(which: keyof typeof stickerColors, mode: ThemeMode): string {
+  return stickerColors[which][mode]
+}

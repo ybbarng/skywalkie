@@ -10,6 +10,8 @@ interface MessageInputProps {
   onTyping?(typing: boolean): void
   onNudge?(): void
   onDoodle?(): void
+  /** 이모티콘 서랍을 여닫는다 */
+  onStickers?(): void
   /** 끊겨 있으면 알려준다. 입력을 막지는 않는다 */
   offline?: boolean
 }
@@ -25,6 +27,7 @@ export function MessageInput({
   onTyping,
   onNudge,
   onDoodle,
+  onStickers,
   offline = false,
 }: MessageInputProps) {
   const theme = useTheme()
@@ -65,6 +68,7 @@ export function MessageInput({
         style={{ flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing.sm }}
       >
         <SideButton icon="alert" label="콕 찌르기" onPress={onNudge} />
+        <SideButton icon="heart" label="이모티콘" onPress={onStickers} />
         <SideButton icon="chat" label="낙서" onPress={onDoodle} />
 
         <TextInput
@@ -121,7 +125,7 @@ function SideButton({
   label,
   onPress,
 }: {
-  icon: 'alert' | 'chat'
+  icon: 'alert' | 'chat' | 'heart'
   label: string
   onPress?: () => void
 }) {

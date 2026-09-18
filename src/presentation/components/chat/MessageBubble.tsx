@@ -1,7 +1,9 @@
 import { View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import type { Message } from '@/domain/message/Message'
+import type { CharacterId } from '@/domain/peer/Character'
 import type { PeerId } from '@/domain/peer/PeerId'
+import { Sticker } from '../../characters/Sticker'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { useTheme } from '../../theme/ThemeProvider'
 import { Icon } from '../Icon'
@@ -36,6 +38,10 @@ export function MessageBubble({
   const bubbleColor = mine ? theme.colors.me : theme.colors.peer
   const textColor = mine ? theme.colors.meText : theme.colors.peerText
 
+  // **이모티콘은 말풍선에 안 담는다.** 그림이 이미 말이라
+  // 테두리를 두르면 답답해 보인다.
+  const bare = message.content.kind === 'sticker'
+
   return (
     <Animated.View
       entering={reducedMotion ? undefined : FadeInDown.duration(theme.duration.bubble)}
@@ -46,15 +52,19 @@ export function MessageBubble({
       }}
     >
       <View
-        style={{
-          backgroundColor: bubbleColor,
-          borderRadius: theme.radius.xl,
-          // 말하는 쪽 아래 모서리만 각지게. 꼬리 없이도 누구 말인지 안다.
-          borderBottomRightRadius: mine ? theme.radius.sm : theme.radius.xl,
-          borderBottomLeftRadius: mine ? theme.radius.xl : theme.radius.sm,
-          paddingHorizontal: theme.spacing.lg,
-          paddingVertical: theme.spacing.md,
-        }}
+        style={
+          bare
+            ? undefined
+            : {
+                backgroundColor: bubbleColor,
+                borderRadius: theme.radius.xl,
+                // 말하는 쪽 아래 모서리만 각지게. 꼬리 없이도 누구 말인지 안다.
+                borderBottomRightRadius: mine ? theme.radius.sm : theme.radius.xl,
+                borderBottomLeftRadius: mine ? theme.radius.xl : theme.radius.sm,
+                paddingHorizontal: theme.spacing.lg,
+                paddingVertical: theme.spacing.md,
+              }
+        }
       >
         <BubbleContent message={message} textColor={textColor} />
       </View>
@@ -95,6 +105,15 @@ function BubbleContent({ message, textColor }: { message: Message; textColor: st
           <Icon name="alert" size={18} />
           <Text style={{ color: textColor }}>콕 찔렀어요</Text>
         </View>
+      )
+
+    case 'sticker':
+      return (
+        <Sticker
+          character={message.content.character as CharacterId}
+          pose={message.content.pose}
+          size={120}
+        />
       )
 
     case 'doodle':

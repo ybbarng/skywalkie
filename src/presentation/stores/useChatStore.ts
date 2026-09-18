@@ -15,7 +15,12 @@ import { ids } from '@/composition/services'
 import type { ConnectionState } from '@/domain/connection/ConnectionState'
 import type { Conversation } from '@/domain/message/Conversation'
 import type { Message } from '@/domain/message/Message'
-import { nudgeContent, textContent } from '@/domain/message/MessageContent'
+import {
+  nudgeContent,
+  type StickerPose,
+  stickerContent,
+  textContent,
+} from '@/domain/message/MessageContent'
 import type { CharacterId } from '@/domain/peer/Character'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { systemClock } from '@/domain/shared/Clock'
@@ -59,6 +64,8 @@ interface ChatState {
   send(text: string): Promise<void>
   sendTyping(typing: boolean): void
   sendNudge(): Promise<void>
+  /** 내 캐릭터가 자세를 취한다. 자세 이름만 나가서 몇십 바이트다 */
+  sendSticker(pose: StickerPose): Promise<void>
   loadOlder(): Promise<void>
   markVisibleAsRead(): Promise<void>
   stop(): void
@@ -415,6 +422,41 @@ export const useChatStore = create<ChatState>((set, get) => {
 
         if (result.ok) {
           set({ conversation: result.value.conversation })
+          await refresh()
+        }
+      })
+    },
+
+    async sendSticker(pose) {
+      await queue.run(async () => {
+        const active = deps
+        if (active === null) return
+        const conversation = get().conversation
+        if (conversation === null) return
+
+        const content = stickerContent(active.profile.character, pose)
+        if (!content.ok) return
+
+        const sender = new SendMessage(
+          active.transport,
+          active.repository,
+          systemClock,
+          ids,
+        )
+
+        const result = await sender.execute({
+          author: active.me,
+          content: content.value,
+          conversation,
+        })
+
+        if (result.ok) {
+          set({
+            conversation: result.value.conversation,
+            pendingCount: result.value.sentNow
+              ? get().pendingCount
+              : get().pendingCount + 1,
+          })
           await refresh()
         }
       })

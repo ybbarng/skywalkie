@@ -37,10 +37,37 @@ export function describe(message: ArchivedMessage): string {
       return content.text
     case 'doodle':
       return `(낙서 ${content.strokes.length}줄)`
+    case 'sticker':
+      return `(${poseWord(content.pose)})`
     case 'nudge':
       return '(콕 찔렀어요)'
     case 'system':
       return `(${systemNotice(content.notice)})`
+  }
+}
+
+/** 자세를 글로. 이모티콘은 글로 옮길 수 없지만 무엇이었는지는 남는다 */
+export function poseWord(pose: string): string {
+  switch (pose) {
+    case 'wave':
+      return '손 흔들기'
+    case 'sleep':
+      return '자는 중'
+    case 'heart':
+      return '하트'
+    case 'laugh':
+      return '웃음'
+    case 'cry':
+      return '울음'
+    case 'thumbsUp':
+      return '엄지척'
+    case 'eat':
+      return '먹는 중'
+    case 'bored':
+      return '심심해'
+    default:
+      // 모르는 자세가 와도 멈추지 않는다. 다른 버전이 보낸 것일 수 있다.
+      return '이모티콘'
   }
 }
 

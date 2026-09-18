@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { Envelope } from '@/application/ports/Envelope'
+import { stickerPoses } from '@/domain/message/MessageContent'
 import { characterIds } from '@/domain/peer/Character'
 import { type DomainError, domainError } from '@/domain/shared/DomainError'
 import { err, ok, type Result } from '@/domain/shared/Result'
@@ -36,6 +37,13 @@ const stroke = z.object({
 const messageContent = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('text'), text: z.string().min(1).max(4000) }),
   z.object({ kind: z.literal('doodle'), strokes: z.array(stroke).min(1).max(200) }),
+  z.object({
+    kind: z.literal('sticker'),
+    // 캐릭터 이름을 목록으로 막지 않는다. 상대가 새 버전이라
+    // 우리가 모르는 캐릭터를 쓸 수 있는데, 그때 대화가 끊기면 안 된다.
+    character: z.string().min(1).max(32),
+    pose: z.enum(stickerPoses),
+  }),
   z.object({ kind: z.literal('nudge') }),
   z.object({
     kind: z.literal('system'),

@@ -31,6 +31,7 @@ export type IconName =
   | 'refresh'
   | 'alert'
   | 'plane'
+  | 'heart'
 
 interface IconProps {
   name: IconName
@@ -87,6 +88,13 @@ function renderPaths(name: IconName, p: PathProps) {
           <Path d="M21 3 10.5 13.5" {...p} />
           <Path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z" {...p} />
         </>
+      )
+    case 'heart':
+      return (
+        <Path
+          d="M12 20s-7.5-4.8-7.5-10A4.5 4.5 0 0 1 12 7.6 4.5 4.5 0 0 1 19.5 10c0 5.2-7.5 10-7.5 10Z"
+          {...p}
+        />
       )
     case 'phone':
       return (

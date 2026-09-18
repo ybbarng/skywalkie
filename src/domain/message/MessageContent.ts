@@ -44,6 +44,40 @@ export interface Point {
   readonly y: number
 }
 
+/**
+ * 캐릭터 이모티콘.
+ *
+ * **그림을 나르지 않는다.** 어떤 캐릭터가 어떤 자세인지만 보내면
+ * 받는 쪽이 코드로 그린다. 몇십 바이트라 좁은 길로도 즉시 간다.
+ * (docs/05-messaging-spec.md · T23)
+ */
+export interface StickerContent {
+  readonly kind: 'sticker'
+  readonly character: string
+  readonly pose: StickerPose
+}
+
+export const stickerPoses = [
+  /** 손 흔들기 */
+  'wave',
+  /** 자는 중 */
+  'sleep',
+  /** 하트 띄우기 */
+  'heart',
+  /** 웃기 */
+  'laugh',
+  /** 울기 */
+  'cry',
+  /** 엄지 */
+  'thumbsUp',
+  /** 먹는 중. 기내식 나왔을 때 */
+  'eat',
+  /** 심심해 */
+  'bored',
+] as const
+
+export type StickerPose = (typeof stickerPoses)[number]
+
 /** 콕 찌르기. 담을 내용이 없다 */
 export interface NudgeContent {
   readonly kind: 'nudge'
@@ -63,7 +97,12 @@ export type SystemNotice =
   | 'call-ended'
   | 'conversation-imported'
 
-export type MessageContent = TextContent | DoodleContent | NudgeContent | SystemContent
+export type MessageContent =
+  | TextContent
+  | DoodleContent
+  | StickerContent
+  | NudgeContent
+  | SystemContent
 
 export function textContent(raw: string): Result<TextContent, DomainError> {
   const text = raw.trim()
@@ -146,6 +185,22 @@ function isRatio(value: number): boolean {
   return Number.isFinite(value) && value >= 0 && value <= 1
 }
 
+export function stickerContent(
+  character: string,
+  pose: string,
+): Result<StickerContent, DomainError> {
+  if (character.length === 0) {
+    return err(domainError('empty', '캐릭터를 고르지 않았다', 'sticker'))
+  }
+
+  const found = stickerPoses.find(known => known === pose)
+  if (found === undefined) {
+    return err(domainError('invalid-value', `모르는 자세다: ${pose}`, 'sticker'))
+  }
+
+  return ok({ kind: 'sticker', character, pose: found })
+}
+
 export function nudgeContent(): NudgeContent {
   return { kind: 'nudge' }
 }
@@ -164,5 +219,6 @@ export function isFromPerson(content: MessageContent): boolean {
  * 낙서는 크기가 커서 Wi-Fi 가 열릴 때까지 기다린다.
  */
 export function fitsNarrowLink(content: MessageContent): boolean {
+  // 이모티콘은 자세 이름만 담겨서 몇십 바이트다. 좁은 길로도 간다.
   return content.kind !== 'doodle'
 }
