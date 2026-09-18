@@ -75,7 +75,17 @@ export async function show(element: ReactElement): Promise<Screen> {
       { deep: true },
     )
 
-    const matching = pressables.filter(node => textOf(node).includes(label))
+    /*
+      글자로도 찾고 **접근성 이름으로도 찾는다.**
+
+      물음표나 닫기 같은 것은 그림뿐이라 글자가 없다. 사람은 눈으로
+      알아보지만 여기서는 접근성 이름이 유일한 단서다. 그 이름을 안
+      달아두면 눈이 안 보이는 사람도 못 쓴다.
+    */
+    const matching = pressables.filter(node => {
+      const spoken = String(node.props?.accessibilityLabel ?? '')
+      return textOf(node).includes(label) || spoken.includes(label)
+    })
     // 가장 안쪽 것. 바깥 것은 화면 전체를 감싸고 있을 수 있다
     return matching.length === 0 ? null : (matching[matching.length - 1] ?? null)
   }

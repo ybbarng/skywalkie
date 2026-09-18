@@ -1,3 +1,5 @@
+import { vi } from 'vitest'
+
 /**
  * 화면 시험을 위한 바닥 깔기.
  *
@@ -57,3 +59,27 @@ const expoGlobal = {
 ;(globalThis as any).expo = expoGlobal
 // biome-ignore lint/suspicious/noExplicitAny: 위와 같다
 ;(globalThis as any).__ExpoImportMetaRegistry = undefined
+
+/**
+ * 기기에 남기는 저장소를 흉내 낸다.
+ *
+ * 진짜는 `expo-sqlite/kv-store` 라 맥에서 안 돈다. **여기서 보려는 것은
+ * 저장이 되는가가 아니라 화면이 도는가**라, 기억만 해두면 된다.
+ *
+ * 저장이 답을 안 하는 상황을 보고 싶으면 그 시험에서 따로 덮어쓴다.
+ */
+vi.mock('expo-sqlite/kv-store', () => {
+  const box = new Map<string, string>()
+
+  return {
+    default: {
+      getItem: async (key: string) => box.get(key) ?? null,
+      setItem: async (key: string, value: string) => {
+        box.set(key, value)
+      },
+      removeItem: async (key: string) => {
+        box.delete(key)
+      },
+    },
+  }
+})

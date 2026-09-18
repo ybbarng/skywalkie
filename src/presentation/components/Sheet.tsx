@@ -43,12 +43,21 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
         exiting={reducedMotion ? undefined : FadeOut.duration(theme.duration.theme)}
         style={[styles.backdrop, { backgroundColor: theme.colors.overlay }]}
       >
-        {/* 바깥을 누르면 닫힌다 */}
-        <Pressable
-          style={styles.backdropTouch}
-          onPress={onClose}
-          accessibilityLabel="닫기"
-        />
+        {/*
+          바깥을 누르면 닫힌다.
+
+          **시트 위를 덮으면 안 된다.** 전에는 화면 전체를 덮어두고
+          시트를 그 위에 얹었는데, 손가락으로 누르면 배경이 먼저
+          가로채서 **시트 안의 단추가 하나도 안 먹었다.** 설명을 열면
+          닫을 수가 없어 거기서 갇혔다.
+
+          (기기에서 누르는 흉내로는 안 잡힌다. 합성 터치는 움직임이
+          없어서 그냥 통과한다. 손가락만 걸린다.)
+
+          그래서 덮지 않고 **남는 자리만 차지한다.** `flex: 1` 이 시트를
+          뺀 위쪽 빈 곳을 채운다. 겹치는 데가 없으니 가로챌 일도 없다.
+        */}
+        <Pressable style={styles.above} onPress={onClose} accessibilityLabel="닫기" />
 
         <Animated.View
           entering={
@@ -94,7 +103,8 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
-  backdropTouch: StyleSheet.absoluteFill,
+  /** 시트 위쪽 빈 자리. **시트와 겹치지 않는다** */
+  above: { flex: 1 },
   sheet: { width: '100%' },
   grabber: {
     width: 36,

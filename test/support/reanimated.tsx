@@ -49,9 +49,50 @@ export const Easing = {
   in: passthrough,
   bezier: () => passthrough,
 }
-export const FadeIn = { duration: () => FadeIn }
-export const FadeOut = { duration: () => FadeOut }
-export const Layout = { duration: () => Layout }
+/**
+ * 화면에 들고 날 때의 움직임.
+ *
+ * `FadeIn.duration(200).delay(50)` 처럼 줄줄이 이어 부른다. 그래서
+ * **무엇을 불러도 자기 자신을 돌려주는** 것으로 만든다. 하나라도 빠지면
+ * 화면이 아예 안 그려진다.
+ */
+function motion(): Record<string, () => unknown> {
+  const self: Record<string, () => unknown> = {}
+  for (const name of [
+    'duration',
+    'delay',
+    'springify',
+    'easing',
+    'withInitialValues',
+    'withCallback',
+    'randomDelay',
+    'reduceMotion',
+    'build',
+    'damping',
+    'stiffness',
+    'mass',
+    'restDisplacementThreshold',
+    'restSpeedThreshold',
+  ]) {
+    self[name] = () => self
+  }
+  return self
+}
+
+export const FadeIn = motion()
+export const FadeOut = motion()
+export const SlideInDown = motion()
+export const SlideOutDown = motion()
+export const SlideInUp = motion()
+export const SlideOutUp = motion()
+export const SlideInLeft = motion()
+export const SlideOutLeft = motion()
+export const SlideInRight = motion()
+export const SlideOutRight = motion()
+export const ZoomIn = motion()
+export const ZoomOut = motion()
+export const Layout = motion()
+export const LinearTransition = motion()
 
 export const Animated = {
   View: host('AnimatedView'),

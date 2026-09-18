@@ -31,7 +31,17 @@ export const KeyboardAvoidingView = host('KeyboardAvoidingView')
 export const SafeAreaView = host('SafeAreaView')
 export const Image = host('Image')
 export const ActivityIndicator = host('ActivityIndicator')
-export const Modal = host('Modal')
+/**
+ * 모달은 **`visible` 을 지켜야 한다.**
+ *
+ * 그냥 자식을 늘 그리면 "닫혔는지" 를 시험할 수 없다. 진짜 모달은
+ * 닫히면 아무것도 안 보인다.
+ */
+export const Modal = forwardRef<unknown, AnyProps>((props, ref) => {
+  if (props.visible === false) return null
+  return createElement('Modal', { ...props, ref })
+})
+Modal.displayName = 'Modal'
 export const FlatList = host('FlatList')
 export const SectionList = host('SectionList')
 export const Switch = host('Switch')

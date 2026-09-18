@@ -32,7 +32,7 @@ export default function Connect() {
     <StepLayout
       step={4}
       totalSteps={4}
-      title={role === 'host' ? '내가 핫스팟을 열게요' : '상대에게 들어갈게요'}
+      title={role === 'host' ? '내가 알리는 쪽이에요' : '내가 찾는 쪽이에요'}
       description={`${roleReason[role]}.`}
       onPrimary={() => {
         void (async () => {
@@ -106,9 +106,14 @@ export default function Connect() {
 /**
  * 핫스팟 이름과 비밀번호.
  *
- * **붙는 쪽 화면에도 그대로 뜬다.** 그래야 상대 폰을 넘겨다보지 않아도
- * 혼자 들어갈 수 있다. 길게 누르면 복사되니 비밀번호를 손으로
- * 옮겨 적을 일도 없다.
+ * **집에서 준비할 때만 쓴다.** 비행기 모드에서는 핫스팟이 안 켜진다
+ * (docs/02-tech-decisions.md D1). 그래서 "이걸 켜세요" 가 아니라
+ * "집에서는 이걸로 더 많은 걸 할 수 있어요" 로 적는다.
+ *
+ * 자리에 앉아서 이 카드를 읽고 잠긴 메뉴를 들여다보게 만들면 안 된다.
+ *
+ * 붙는 쪽 화면에도 그대로 뜬다. 그래야 상대 폰을 넘겨다보지 않아도
+ * 혼자 들어갈 수 있다. 길게 누르면 복사된다.
  */
 function HotspotCard({ role }: { role: 'host' | 'guest' }) {
   const theme = useTheme()
@@ -118,8 +123,12 @@ function HotspotCard({ role }: { role: 'host' | 'guest' }) {
 
   return (
     <Card raised style={{ gap: theme.spacing.sm }}>
-      <Text variant="heading">
-        {role === 'host' ? '내 핫스팟은 이 이름이어야 해요' : '이 Wi-Fi 를 고르세요'}
+      <Text variant="heading">집에서는 Wi-Fi 로 더 많이 할 수 있어요</Text>
+
+      <Text variant="caption" color="textMuted">
+        {'비행기에서는 블루투스로 글과 이모지만 오갑니다. 집에서 핫스팟을 켜두면 '}
+        {'사진과 목소리까지 오가요. 비행기 모드에서는 핫스팟이 안 켜지니 '}
+        {'자리에 앉으면 이건 잊으셔도 됩니다.'}
       </Text>
 
       <Field label="이름" value={homeHotspot.ssid} />
@@ -127,8 +136,8 @@ function HotspotCard({ role }: { role: 'host' | 'guest' }) {
 
       <Text variant="caption" color="textMuted">
         {role === 'host'
-          ? '설정에서 핫스팟 이름이 이것과 다르면 이 이름으로 바꿔주세요. 상대 폰이 이 이름을 찾습니다.'
-          : '길게 누르면 복사돼요. 한 번 들어가두면 폰이 기억해서 다음부터는 저절로 들어갑니다.'}
+          ? '핫스팟 이름을 이것과 같게 맞춰두면 상대 폰이 알아서 찾습니다.'
+          : '길게 누르면 복사돼요. 한 번 들어가두면 폰이 기억합니다.'}
       </Text>
     </Card>
   )
