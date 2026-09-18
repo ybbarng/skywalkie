@@ -26,6 +26,7 @@ import { Icon } from '@/presentation/components/Icon'
 import { Text } from '@/presentation/components/Text'
 import { useNetworkWatch } from '@/presentation/hooks/useNetworkWatch'
 import { useReconnectOnForeground } from '@/presentation/hooks/useReconnectOnForeground'
+import { useWebFallback } from '@/presentation/hooks/useWebFallback'
 import { decidePhase, onOurNetwork } from '@/presentation/stores/connectPhase'
 import { useCallStore } from '@/presentation/stores/useCallStore'
 import { useChatStore } from '@/presentation/stores/useChatStore'
@@ -141,6 +142,18 @@ export default function Chat() {
       reconnectNow?: () => Promise<unknown>
     }
     void transport.reconnectNow?.()
+  })
+
+  // 비상용 웹 채팅.
+  //
+  // **핫스팟을 연 쪽만 띄운다.** 붙는 쪽에서 띄워봐야 아무도 못 들어온다.
+  // 아이폰 앱이 죽어도 사파리로 들어와 대화를 이을 수 있다.
+  useWebFallback({
+    enabled: profile?.role === 'host' && ready,
+    me,
+    peerName: profile?.displayName ?? '나',
+    messages,
+    onSend: send,
   })
 
   // 아직 안 읽은 상대 메시지가 몇 건인가.

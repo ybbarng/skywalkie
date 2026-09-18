@@ -23,6 +23,9 @@ const exemptPaths = [
   // 브라우저는 `useTheme()` 을 모르니 CSS 에 실제 색을 적어야 한다.
   // 여기 값은 테마 토큰과 같게 맞춰 둔다.
   join('src', 'application', 'archive', 'renderHtml.ts'),
+  // 사파리에서 열리는 비상용 화면이다. 브라우저는 `useTheme()` 을 모른다.
+  // 여기 값도 테마 토큰과 같게 맞춰 둔다.
+  join('src', 'infrastructure', 'transport', 'web', 'client'),
 ]
 
 const searchRoots = [join(projectRoot, 'src'), join(projectRoot, 'app')]

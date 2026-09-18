@@ -11,6 +11,10 @@ import {
   makePeerId as makePeerIdImpl,
   ulidGenerator,
 } from '@/infrastructure/platform/UlidGenerator'
+import {
+  LocalHttpServer,
+  type LocalHttpServerHandlers,
+} from '@/infrastructure/transport/web/LocalHttpServer'
 
 /**
  * 화면이 쓰는 것들을 여기서 한 번 거친다.
@@ -48,3 +52,28 @@ export function videoView(): unknown {
 
 export type { KnownPeer, Preferences, Profile }
 export { defaultPreferences }
+
+/**
+ * 비상용 웹 채팅을 띄운다.
+ *
+ * **아이폰 앱이 만료돼도 대화할 수 있는 마지막 길이다.** 못 띄워도
+ * `null` 을 돌려줄 뿐 앱은 그대로 돈다. 덤이기 때문이다.
+ */
+export interface WebChatHandle {
+  stop(): Promise<void>
+  /** 새 말이 생겼다. 기다리는 사파리를 깨운다 */
+  notify(): void
+}
+
+export async function startWebChat(
+  handlers: LocalHttpServerHandlers,
+): Promise<WebChatHandle | null> {
+  const server = new LocalHttpServer(handlers)
+  const started = await server.start()
+  if (!started.ok) return null
+
+  return {
+    stop: () => server.stop(),
+    notify: () => server.notify(),
+  }
+}
