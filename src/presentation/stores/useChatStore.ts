@@ -23,8 +23,10 @@ import type { ConnectionState } from '@/domain/connection/ConnectionState'
 import type { Conversation } from '@/domain/message/Conversation'
 import type { Message } from '@/domain/message/Message'
 import {
+  doodleContent,
   nudgeContent,
   type StickerPose,
+  type Stroke,
   stickerContent,
   textContent,
 } from '@/domain/message/MessageContent'
@@ -84,6 +86,8 @@ interface ChatState {
   sendSticker(pose: StickerPose): Promise<void>
   /** 앨범에서 고르거나 찍어 보낸다 */
   sendPhoto(from: 'library' | 'camera', caption?: string): Promise<void>
+  /** 손으로 그린 낙서. 그림 파일이 아니라 선의 좌표로 간다 */
+  sendDoodle(strokes: readonly Stroke[]): Promise<void>
   loadOlder(): Promise<void>
   markVisibleAsRead(): Promise<void>
   stop(): void
@@ -608,6 +612,42 @@ export const useChatStore = create<ChatState>((set, get) => {
       } finally {
         set({ sendingPhoto: false })
       }
+    },
+
+    async sendDoodle(strokes) {
+      await queue.run(async () => {
+        const active = deps
+        if (active === null) return
+        const conversation = get().conversation
+        if (conversation === null) return
+
+        const content = doodleContent(strokes)
+        // 도메인이 거절하면 그냥 안 보낸다. 빈 낙서이거나 너무 크다.
+        if (!content.ok) return
+
+        const sender = new SendMessage(
+          active.transport,
+          active.repository,
+          systemClock,
+          ids,
+        )
+
+        const result = await sender.execute({
+          author: active.me,
+          content: content.value,
+          conversation,
+        })
+
+        if (result.ok) {
+          set({
+            conversation: result.value.conversation,
+            pendingCount: result.value.sentNow
+              ? get().pendingCount
+              : get().pendingCount + 1,
+          })
+          await refresh()
+        }
+      })
     },
 
     async loadOlder() {

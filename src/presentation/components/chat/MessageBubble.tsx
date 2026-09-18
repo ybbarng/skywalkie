@@ -6,6 +6,7 @@ import type { PeerId } from '@/domain/peer/PeerId'
 import { Sticker } from '../../characters/Sticker'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { useTheme } from '../../theme/ThemeProvider'
+import { DoodleRenderer } from '../doodle/DoodleRenderer'
 import { Icon } from '../Icon'
 import { Text } from '../Text'
 import { DeliveryMark } from './DeliveryMark'
@@ -47,7 +48,10 @@ export function MessageBubble({
 
   // **이모티콘은 말풍선에 안 담는다.** 그림이 이미 말이라
   // 테두리를 두르면 답답해 보인다.
-  const bare = message.content.kind === 'sticker' || message.content.kind === 'photo'
+  const bare =
+    message.content.kind === 'sticker' ||
+    message.content.kind === 'photo' ||
+    message.content.kind === 'doodle'
 
   return (
     <Animated.View
@@ -75,6 +79,7 @@ export function MessageBubble({
       >
         <BubbleContent
           message={message}
+          me={me}
           textColor={textColor}
           assetPath={assetPath}
           assetProgress={assetProgress}
@@ -104,11 +109,13 @@ export function MessageBubble({
 
 function BubbleContent({
   message,
+  me,
   textColor,
   assetPath,
   assetProgress,
 }: {
   message: Message
+  me: PeerId
   textColor: string
   assetPath: string | null
   assetProgress: number | null
@@ -148,8 +155,16 @@ function BubbleContent({
       )
 
     case 'doodle':
-      // T24 에서 실제 그림으로 바뀐다
-      return <Text style={{ color: textColor }}>낙서를 보냈어요</Text>
+      return (
+        <DoodleRenderer
+          strokes={message.content.strokes}
+          width={220}
+          height={160}
+          // 받은 낙서만 그려지는 과정을 보여준다.
+          // 내가 그린 것은 이미 봤다.
+          animate={!message.isMine(me)}
+        />
+      )
 
     case 'system':
       return null

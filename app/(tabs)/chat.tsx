@@ -277,6 +277,7 @@ export default function Chat() {
           onNudge={() => void sendNudgeToPeer()}
           onStickers={() => setStickersOpen(open => !open)}
           onPhoto={() => void sendPhoto('library')}
+          onDoodle={() => router.push('/doodle')}
           offline={!connected}
         />
       </KeyboardAvoidingView>
