@@ -19,6 +19,7 @@ import { WebRtcVoiceLink } from '@/infrastructure/call/WebRtcVoiceLink'
 import { ExpoSqlDatabase } from '@/infrastructure/persistence/ExpoSqlDatabase'
 import { migrate } from '@/infrastructure/persistence/migrations'
 import { SqliteConversationRepository } from '@/infrastructure/persistence/SqliteConversationRepository'
+import { BleMessageTransport } from '@/infrastructure/transport/ble/BleMessageTransport'
 import { CompositeTransport } from '@/infrastructure/transport/CompositeTransport'
 import type { ConnectionRole } from '@/infrastructure/transport/wifi/DiscoveryPlan'
 import { WifiLink } from '@/infrastructure/transport/wifi/WifiLink'
@@ -73,15 +74,20 @@ export async function createContainer(
 
   const repository = new SqliteConversationRepository(db)
 
-  // 지금은 Wi-Fi 하나뿐이다. 블루투스(T20)와 웹(T21)이 여기 붙는다.
+  // Wi-Fi 를 먼저 쓰고, 안 되면 블루투스로 간다.
   //
   // WifiLink 가 찾기와 다시 붙기를 맡는다. TcpMessageTransport 를 그대로
   // 쓰면 붙는 쪽이 상대 주소를 몰라 아무것도 못 한다.
+  //
+  // 블루투스는 **핫스팟을 못 쓸 때만** 쓰는 보조 길이다. 항공사가
+  // 개인 핫스팟을 금지할 수 있어서 둔다. 좁아서 글만 간다.
+  // 모듈이 없거나 빌드가 어긋났으면 그냥 실패할 뿐, 앱은 그대로 돈다.
   const transport = new CompositeTransport([
     new WifiLink(options.role, {
       peerAddress: options.peerAddress,
       pairingCode: options.pairingCode,
     }),
+    new BleMessageTransport(),
   ])
 
   // 만들어만 둔다. 실제 모듈은 통화를 걸 때 비로소 불러온다.

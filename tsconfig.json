@@ -18,7 +18,8 @@
     // baseUrl 은 TypeScript 7 에서 사라진다. paths 만으로 충분하다.
     "paths": {
       "@/*": ["./src/*"],
-      "@test/*": ["./test/*"]
+      "@test/*": ["./test/*"],
+      "@ble/*": ["./modules/ble-peripheral/src/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],

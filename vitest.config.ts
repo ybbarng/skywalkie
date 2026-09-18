@@ -11,6 +11,7 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@test': fileURLToPath(new URL('./test', import.meta.url)),
+      '@ble': fileURLToPath(new URL('./modules/ble-peripheral/src', import.meta.url)),
     },
   },
   test: {
