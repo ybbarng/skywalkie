@@ -2,152 +2,98 @@
 <html lang="ko">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Skywalkie 데모 — 두 폰이 이어지는 모습</title>
+<title>Skywalkie — 가상 기기 두 대</title>
 
 <!--
-  화면이 실제로 어떻게 보이는지 확인하는 데모.
+  진짜 앱 코드를 브라우저에서 돌린다.
 
-  **앱이 아니다.** 진짜 코드를 돌리는 게 아니라, 같은 색·같은 문구·같은
-  흐름을 브라우저에서 흉내 낸 것이다. 두 폰을 나란히 놓고 서로 어떻게
-  보이는지 한눈에 보려고 만들었다.
+  도메인·응용·통신 규약은 순수 TypeScript 라 React Native 없이도 돈다.
+  그걸 그대로 묶어서 가상 기기 두 대에 얹었다.
 
-  색은 src/presentation/theme/colors.ts 와 같은 값이다.
-  문구는 src/presentation/copy/ 와 같은 말이다.
-  캐릭터는 src/presentation/characters/ 와 같은 그림이다.
+  흉내 내는 것은 셋뿐이다.
+    · 선     — 진짜 Wi-Fi 대신 브라우저 안에서 바이트를 나른다
+    · 저장소 — SQLite 대신 메모리
+    · 화면   — React Native 대신 HTML
 
-  바깥에서 아무것도 불러오지 않는다. 파일 하나만 열면 된다.
+  `pnpm demo` 로 다시 묶는다.
 -->
 
 <style>
 :root {
-  /* 어두운 화면. 기내에서 대부분 이걸로 본다 */
-  --bg: #0B1020;
-  --surface: #151B2E;
-  --raised: #1E2740;
-  --border: #2A3450;
-  --text: #E8ECF5;
-  --muted: #8B95AD;
-  --faint: #5C6780;
-  --me: #FF9D5C;
-  --me-text: #2A1408;
-  --peer: #5CC8FF;
-  --peer-text: #04283D;
-  --success: #4ADE80;
-  --warning: #FBBF24;
-  --danger: #F87171;
-  --on-status: #0B1020;
+  --bg: #0B1020; --surface: #151B2E; --raised: #1E2740; --border: #2A3450;
+  --text: #E8ECF5; --muted: #8B95AD; --faint: #5C6780;
+  --me: #FF9D5C; --me-text: #2A1408; --peer: #5CC8FF; --peer-text: #04283D;
+  --success: #4ADE80; --warning: #FBBF24; --danger: #F87171; --on-status: #0B1020;
+  --page: #05070F; --chrome: #11151f;
 }
-
 body.light {
-  --bg: #F6F8FC;
-  --surface: #FFFFFF;
-  --raised: #FFFFFF;
-  --border: #E3E8F2;
-  --text: #121826;
-  --muted: #5D6A85;
-  --faint: #737E92;
-  --me: #C2410C;
-  --me-text: #FFFFFF;
-  --peer: #0369A1;
-  --peer-text: #FFFFFF;
-  --success: #16A34A;
-  --warning: #C2600A;
-  --danger: #DC2626;
-  --on-status: #FFFFFF;
+  --bg: #F6F8FC; --surface: #FFFFFF; --raised: #FFFFFF; --border: #E3E8F2;
+  --text: #121826; --muted: #5D6A85; --faint: #737E92;
+  --me: #C2410C; --me-text: #FFFFFF; --peer: #0369A1; --peer-text: #FFFFFF;
+  --success: #16A34A; --warning: #C2600A; --danger: #DC2626; --on-status: #FFFFFF;
+  --page: #E8EDF6; --chrome: #C8D2E4;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
 body {
-  margin: 0;
-  min-height: 100vh;
-  background: #05070F;
-  color: #E8ECF5;
+  margin: 0; min-height: 100vh; background: var(--page); color: var(--text);
   font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
         "Malgun Gothic", "Noto Sans KR", sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 16px 64px;
-  gap: 20px;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 22px 16px 56px; gap: 16px;
 }
-body.light { background: #E8EDF6; color: #121826; }
 
-h1 { font-size: 19px; margin: 0; letter-spacing: -0.2px; }
-.sub { color: #8B95AD; font-size: 13px; margin: 0; text-align: center; max-width: 640px; }
+h1 { font-size: 19px; margin: 0; }
+.sub { color: var(--muted); font-size: 13px; margin: 0; text-align: center; max-width: 720px; }
+.sub b { color: var(--text); }
 
-/* ── 조작판 ───────────────────────────────────────── */
-.panel {
-  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
-  background: rgba(21,27,46,.6); border: 1px solid #2A3450;
-  border-radius: 14px; padding: 12px; max-width: 860px;
+#panel {
+  display: flex; flex-wrap: wrap; gap: 7px; justify-content: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 11px; max-width: 900px;
 }
-body.light .panel { background: rgba(255,255,255,.7); border-color: #D6DEEC; }
-
-.panel button {
-  font: inherit; font-size: 13px; font-weight: 600;
-  padding: 8px 14px; border-radius: 999px; cursor: pointer;
-  border: 1px solid #2A3450; background: #1E2740; color: #E8ECF5;
-  transition: transform .08s ease;
+#panel button {
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 7px 13px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--raised); color: var(--text);
 }
-body.light .panel button { border-color: #D6DEEC; background: #FFF; color: #121826; }
-.panel button:hover { transform: translateY(-1px); }
-.panel button.on { background: var(--me); color: var(--me-text); border-color: transparent; }
-.panel .sep { width: 1px; background: #2A3450; margin: 2px 4px; }
+#panel button:disabled { opacity: .35; cursor: default; }
+#panel button.on { background: var(--me); color: var(--me-text); border-color: transparent; }
+#panel .sep { width: 1px; background: var(--border); margin: 2px 3px; }
 
-/* ── 폰 두 대 ─────────────────────────────────────── */
-.stage { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; }
-
-.phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.phone-label { font-size: 12px; color: #8B95AD; letter-spacing: .3px; }
-.phone-label b { color: #E8ECF5; }
-body.light .phone-label b { color: #121826; }
+.stage { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+.phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.phone-label { font-size: 12px; color: var(--muted); }
+.phone-label b { color: var(--text); }
 
 .phone {
-  width: 320px; height: 660px;
-  border-radius: 40px; padding: 10px;
-  background: #11151f;
-  box-shadow: 0 0 0 2px #2A3450, 0 24px 60px rgba(0,0,0,.5);
+  width: 320px; height: 648px; border-radius: 40px; padding: 10px;
+  background: var(--chrome); box-shadow: 0 0 0 2px var(--border), 0 20px 50px rgba(0,0,0,.45);
   position: relative;
 }
-body.light .phone { background: #C8D2E4; box-shadow: 0 0 0 2px #B9C5DA, 0 24px 60px rgba(0,0,0,.18); }
-
 .screen {
-  width: 100%; height: 100%;
-  border-radius: 31px; overflow: hidden;
+  width: 100%; height: 100%; border-radius: 31px; overflow: hidden;
   background: var(--bg); color: var(--text);
-  display: flex; flex-direction: column;
-  position: relative;
+  display: flex; flex-direction: column; position: relative;
 }
-
 .notch {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-  width: 108px; height: 22px; border-radius: 12px; background: #11151f; z-index: 20;
+  width: 104px; height: 22px; border-radius: 12px; background: var(--chrome); z-index: 20;
 }
-body.light .notch { background: #C8D2E4; }
 
-/* ── 상태 띠 ──────────────────────────────────────── */
 .statusbar {
-  height: 34px; display: flex; align-items: flex-end; justify-content: space-between;
+  height: 32px; display: flex; align-items: flex-end; justify-content: space-between;
   padding: 0 16px 2px; font-size: 11px; color: var(--muted); flex: none;
 }
-
 .linkbar {
   padding: 5px 14px; font-size: 11.5px; font-weight: 600; flex: none;
   display: flex; align-items: center; gap: 6px;
 }
 .linkbar.ok { background: var(--success); color: var(--on-status); }
-.linkbar.warn { background: var(--warning); color: var(--on-status); }
 .linkbar.bad { background: var(--danger); color: var(--on-status); }
 .linkbar.idle { background: var(--raised); color: var(--muted); }
+.notice.bad { padding: 6px 14px; font-size: 11.5px; background: var(--danger); color: var(--on-status); flex: none; }
 
-.notice {
-  padding: 6px 14px; font-size: 11.5px; flex: none;
-  background: var(--raised); color: var(--muted);
-  display: flex; align-items: center; gap: 6px;
-}
-
-/* ── 상대 머리말 ──────────────────────────────────── */
 .peerhead {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 14px; border-bottom: 1px solid var(--border); flex: none;
@@ -155,824 +101,129 @@ body.light .notch { background: #C8D2E4; }
 .peerhead .who { flex: 1; min-width: 0; }
 .peerhead .name { font-weight: 700; font-size: 14px; }
 .peerhead .state { font-size: 11.5px; color: var(--muted); }
-.peerhead .acts { display: flex; gap: 12px; }
-.peerhead .acts button {
-  background: none; border: 0; padding: 0; cursor: pointer; color: var(--text);
-  display: grid; place-items: center;
-}
 
-/* ── 대화 ─────────────────────────────────────────── */
-.log { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; }
+.log { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; }
 .log::-webkit-scrollbar { width: 0; }
+.log.empty { justify-content: center; align-items: center; text-align: center; }
+.log.empty b { display: block; color: var(--muted); font-size: 14px; margin-bottom: 5px; }
+.log.empty span { color: var(--faint); font-size: 12px; }
 
-.daypill { align-self: center; margin: 12px 0 8px; }
-.daypill span {
-  background: var(--surface); color: var(--muted);
-  font-size: 11px; padding: 3px 12px; border-radius: 999px;
-}
+.daypill { align-self: center; margin: 10px 0 6px; }
+.daypill span { background: var(--surface); color: var(--muted); font-size: 11px; padding: 3px 12px; border-radius: 999px; }
 
-.row { display: flex; align-items: flex-end; gap: 6px; margin-top: 10px; }
+.row { display: flex; align-items: flex-end; gap: 6px; margin-top: 9px; }
 .row.mine { flex-direction: row-reverse; }
-.row.grouped { margin-top: 3px; }
-
 .bubble {
-  max-width: 76%; padding: 8px 13px; border-radius: 20px;
+  max-width: 74%; padding: 8px 13px; border-radius: 20px;
   background: var(--peer); color: var(--peer-text);
   white-space: pre-wrap; word-break: break-word; font-size: 14px;
-  animation: pop .18s ease;
 }
 .row.mine .bubble { background: var(--me); color: var(--me-text); border-bottom-right-radius: 6px; }
 .row:not(.mine) .bubble { border-bottom-left-radius: 6px; }
-
-/* 이모티콘은 말풍선에 안 담는다. 그림이 이미 말이라 테두리가 답답하다 */
-.row .bubble.bare,
-.row.mine .bubble.bare { background: none; padding: 0; border-radius: 0; }
-
-
-@keyframes pop { from { opacity: 0; transform: translateY(6px); } }
+.row .bubble.bare, .row.mine .bubble.bare { background: none; padding: 0; border-radius: 0; }
 
 .meta { font-size: 10px; color: var(--faint); display: flex; align-items: center; gap: 3px; white-space: nowrap; }
-.sysline { align-self: center; color: var(--faint); font-size: 11.5px; margin: 10px 0; text-align: center; }
+.meta .wait, .meta .fail { font-size: 9.5px; }
+.meta .fail { color: var(--danger); }
+.meta .dot { width: 7px; height: 7px; border-radius: 4px; border: 1.5px solid var(--faint); }
+.sysline { align-self: center; color: var(--faint); font-size: 11.5px; margin: 8px 0; }
 
 .typing {
-  align-self: flex-start; margin-top: 10px;
-  background: var(--surface); border-radius: 20px; border-bottom-left-radius: 6px;
-  padding: 10px 16px; display: flex; gap: 4px;
+  align-self: flex-start; margin-top: 9px; background: var(--surface);
+  border-radius: 20px; border-bottom-left-radius: 6px; padding: 10px 16px;
+  display: flex; gap: 4px;
 }
-.typing i {
-  width: 6px; height: 6px; border-radius: 3px; background: var(--muted);
-  animation: bob 1.1s infinite;
-}
+.typing i { width: 6px; height: 6px; border-radius: 3px; background: var(--muted); animation: bob 1.1s infinite; }
 .typing i:nth-child(2) { animation-delay: .16s; }
 .typing i:nth-child(3) { animation-delay: .32s; }
 @keyframes bob { 0%,60%,100% { transform: none; } 30% { transform: translateY(-4px); } }
 
-/* ── 입력줄 ───────────────────────────────────────── */
 .composer {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px 14px; border-top: 1px solid var(--border); flex: none;
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 11px 13px; border-top: 1px solid var(--border); flex: none;
 }
-.composer .tool {
-  background: none; border: 0; padding: 4px; cursor: pointer;
-  color: var(--muted); display: grid; place-items: center;
-}
+.composer .tool { background: none; border: 0; padding: 3px; cursor: pointer; color: var(--muted); display: grid; place-items: center; }
 .composer input {
-  flex: 1; min-width: 0; font: inherit; font-size: 14px;
-  padding: 8px 14px; border-radius: 999px;
-  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 8px 14px;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
 }
 .composer .send {
-  width: 34px; height: 34px; border-radius: 17px; border: 0; cursor: pointer;
-  background: var(--me); color: var(--me-text); display: grid; place-items: center;
+  width: 33px; height: 33px; border-radius: 17px; border: 0; cursor: pointer;
+  background: var(--me); color: var(--me-text); display: grid; place-items: center; flex: none;
 }
-.composer .send:disabled { opacity: .4; }
 
-/* ── 이어지는 중 화면 ─────────────────────────────── */
 .connecting {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center;
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px; padding: 22px; text-align: center;
 }
+.connecting .dim { opacity: .45; }
 .connecting h2 { font-size: 17px; margin: 0; }
 .connecting p { font-size: 13px; color: var(--muted); margin: 0; white-space: pre-line; }
 .connecting .action {
-  margin-top: 6px; font: inherit; font-size: 13px; font-weight: 600;
+  margin-top: 4px; font: inherit; font-size: 13px; font-weight: 600;
   padding: 10px 20px; border-radius: 999px; border: 0; cursor: pointer;
   background: var(--me); color: var(--me-text);
 }
-.hint {
-  background: var(--surface); border-radius: 14px; padding: 12px 14px;
-  font-size: 12px; color: var(--muted); text-align: left; max-width: 250px;
+.phasetag {
+  position: absolute; bottom: 12px; font-size: 10px; color: var(--faint);
+  font-family: ui-monospace, monospace; letter-spacing: .3px;
 }
-.hint b { color: var(--text); display: block; margin-bottom: 6px; font-size: 12.5px; }
-.hint li { margin: 3px 0; }
-.hint ul { margin: 0; padding-left: 16px; }
 
-/* ── 통화 창 ──────────────────────────────────────── */
-.call {
-  position: absolute; inset: 0; z-index: 15; background: var(--bg);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 16px; padding: 24px; text-align: center;
-}
-.call .name { font-size: 18px; font-weight: 700; }
-.call .phase { font-size: 13px; color: var(--muted); }
-.call .timer { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
-.ptt {
-  width: 168px; height: 168px; border-radius: 84px; cursor: pointer;
-  border: 3px solid var(--border); background: var(--raised); color: var(--text);
-  display: grid; place-items: center; gap: 6px; font: inherit; font-weight: 600; font-size: 13px;
-  user-select: none;
-}
-.ptt.talking { background: var(--success); color: var(--on-status); border-color: transparent; }
-.callbtns { display: flex; gap: 22px; }
-.rbtn { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.rbtn button {
-  width: 60px; height: 60px; border-radius: 30px; border: 0; cursor: pointer;
-  display: grid; place-items: center;
-}
-.rbtn .lbl { font-size: 11px; color: var(--muted); }
-.rbtn.accept button { background: var(--success); }
-.rbtn.decline button { background: var(--danger); }
-
-/* ── 이모티콘 서랍 ────────────────────────────────── */
-.drawer {
-  border-top: 1px solid var(--border); background: var(--surface);
-  padding: 10px 0; flex: none;
-}
-.drawer .head {
-  display: flex; justify-content: space-between; padding: 0 14px 6px;
-  font-size: 11.5px; color: var(--muted);
-}
+.drawer { border-top: 1px solid var(--border); background: var(--surface); padding: 9px 0; flex: none; }
+.drawer .head { display: flex; justify-content: space-between; padding: 0 14px 5px; font-size: 11.5px; color: var(--muted); }
 .drawer .head button { background: none; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 11.5px; }
-.drawer .strip { display: flex; gap: 8px; overflow-x: auto; padding: 0 14px; }
+.drawer .strip { display: flex; gap: 7px; overflow-x: auto; padding: 0 14px; }
 .drawer .strip::-webkit-scrollbar { height: 0; }
-.drawer .strip button {
-  background: var(--bg); border: 0; border-radius: 14px; padding: 4px; cursor: pointer; flex: none;
+.drawer .strip button { background: var(--bg); border: 0; border-radius: 13px; padding: 3px; cursor: pointer; flex: none; }
+
+.netlog {
+  width: 340px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden; align-self: stretch; max-height: 648px;
+  display: flex; flex-direction: column;
 }
+.netlog-head { padding: 10px 14px; font-size: 12.5px; font-weight: 700; border-bottom: 1px solid var(--border); flex: none; }
+.events { flex: 1; overflow-y: auto; padding: 6px 0; font-family: ui-monospace, monospace; font-size: 11px; }
+.ev { display: flex; gap: 8px; padding: 3px 14px; }
+.ev .who { color: var(--faint); flex: none; width: 58px; }
+.ev .txt { color: var(--muted); word-break: break-all; }
+.ev.send .txt { color: var(--me); }
+.ev.recv .txt { color: var(--peer); }
+.ev.warn .txt { color: var(--danger); }
+.bytes { padding: 8px 14px; font-size: 11px; color: var(--faint); border-top: 1px solid var(--border); flex: none; }
 
 svg { display: block; }
-.legend { font-size: 12px; color: #8B95AD; max-width: 860px; text-align: center; }
-.legend code { background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 4px; }
-body.light .legend code { background: rgba(0,0,0,.06); }
+.legend { font-size: 12px; color: var(--muted); max-width: 860px; text-align: center; }
+.legend code { background: rgba(128,128,128,.14); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
 </style>
 
-<h1>Skywalkie — 두 폰이 이어지는 모습</h1>
+<h1>Skywalkie — 가상 기기 두 대</h1>
 <p class="sub">
-  왼쪽이 내 안드로이드, 오른쪽이 여자친구 아이폰이에요.
-  실제 앱과 <b>같은 색·같은 문구·같은 캐릭터</b>로 흐름만 흉내 냈어요.
+  <b>진짜 앱 코드가 돕니다.</b> 핫스팟을 켜고, 서로 찾고, 붙고, 인사하고, 말을 주고받아요.
+  흉내 내는 건 선·저장소·화면 셋뿐이에요.
 </p>
 
-<div class="panel">
-  <button id="btn-scene-connect">처음 이어지기</button>
-  <button id="btn-scene-chat">대화 중</button>
-  <button id="btn-scene-drop">핫스팟 꺼짐</button>
-  <button id="btn-scene-call">통화</button>
-  <span class="sep"></span>
-  <button id="btn-typing">입력 중 보이기</button>
-  <button id="btn-sticker">이모티콘 서랍</button>
-  <button id="btn-battery">배터리 경고</button>
-  <span class="sep"></span>
-  <button id="btn-theme">밝은 화면으로</button>
-</div>
+<div id="panel"></div>
 
 <div class="stage">
   <div class="phone-wrap">
-    <div class="phone-label">내 폰 · <b>안드로이드</b> (핫스팟을 연다)</div>
+    <div class="phone-label">내 폰 · <b>안드로이드</b> · 핫스팟을 연다</div>
     <div class="phone"><div class="notch"></div><div class="screen" id="screen-host"></div></div>
   </div>
+
+  <div id="netlog-slot"></div>
+
   <div class="phone-wrap">
-    <div class="phone-label">여자친구 폰 · <b>아이폰</b> (들어간다)</div>
+    <div class="phone-label">여자친구 폰 · <b>아이폰</b> · 들어간다</div>
     <div class="phone"><div class="notch"></div><div class="screen" id="screen-guest"></div></div>
   </div>
 </div>
 
 <p class="legend">
-  한쪽에 글을 쓰면 <b>실제처럼 반대쪽으로 건너갑니다.</b>
-  읽음 표시(✓✓)와 입력 중 표시도 그대로 동작해요.
-  위 단추로 상황을 바꿔볼 수 있어요.
+  <b>핫스팟 켜기 → Wi-Fi 에 들어가기 → 상대 찾아 잇기</b> 순서로 눌러보세요.
+  그다음 아무 쪽에나 글을 쓰면 실제로 봉투가 만들어져 건너갑니다.
+  <br>
+  <code>신호 끊기</code> 로 끊고 글을 쓴 뒤 <code>다시 잇기</code> 를 누르면
+  <b>놓친 말을 되찾는 것</b>까지 진짜로 돕니다.
 </p>
 
-<script>
-/* ═══════════════════════════════════════════════════
-   캐릭터 그리기
-
-   src/presentation/characters/ 와 같은 그림이다. 머리 모양과
-   소품만 다르고 얼굴 얼개는 하나를 함께 쓴다.
-   ═══════════════════════════════════════════════════ */
-
-var PALETTE = {
-  aria:  { skin:'#F0C9A8', shade:'#DCAE8A', hair:'#4A3428', hairDark:'#33231B', acc:'#FF9D5C', cloth:'#5CC8FF', line:'#2A1B14', mouth:'#8C4A3F', blush:'#F2A08C' },
-  mira:  { skin:'#EDC3A0', shade:'#D6A57F', hair:'#8A4B2A', hairDark:'#6A3620', acc:'#FBBF24', cloth:'#F472B6', line:'#2A1B14', mouth:'#8C4A3F', blush:'#F2A08C' },
-  orion: { skin:'#D9A87E', shade:'#C08F67', hair:'#2C2620', hairDark:'#1D1914', acc:'#E8ECF5', cloth:'#4ADE80', line:'#221A14', mouth:'#7E3F35', blush:'#D98E78' },
-  kai:   { skin:'#DCAF87', shade:'#C3956E', hair:'#22201C', hairDark:'#161411', acc:'#34D399', cloth:'#334155', line:'#221A14', mouth:'#7E3F35', blush:'#D98E78' }
-}
-
-function hair(id, p) {
-  if (id === 'aria') return '<path d="M30 54c0-19 13-30 30-30s30 11 30 30c0-8-6-12-12-13-6 4-30 4-36 0-6 1-12 5-12 13z" fill="'+p.hair+'"/>'
-    + '<path d="M28 52c-1 16 1 28 4 36 2-10 2-24 1-36zM92 52c1 16-1 28-4 36-2-10-2-24-1-36z" fill="'+p.hair+'"/>'
-  if (id === 'mira') return '<path d="M30 58c0-20 13-32 30-32s30 12 30 32c-2-10-7-15-13-16-7 4-27 4-34 0-6 1-11 6-13 16z" fill="'+p.hair+'"/>'
-    + '<circle cx="30" cy="60" r="7" fill="'+p.hair+'"/><circle cx="90" cy="60" r="7" fill="'+p.hair+'"/>'
-  if (id === 'kai') return '<path d="M32 54c1-15 13-25 28-25s27 10 28 25c-4-7-10-10-16-11-8 3-16 3-24 0-6 1-12 4-16 11z" fill="'+p.hair+'"/>'
-  return '<path d="M31 50c2-16 14-26 29-26s27 10 29 26c-4-6-10-9-16-10-8 3-18 3-26 0-6 1-12 4-16 10z" fill="'+p.hair+'"/>'
-}
-
-function accessory(id, p) {
-  if (id === 'aria') return '<path d="M27 56a33 33 0 0 1 66 0" stroke="'+p.acc+'" stroke-width="4" fill="none" stroke-linecap="round"/>'
-    + '<rect x="21" y="52" width="10" height="16" rx="5" fill="'+p.acc+'"/><rect x="89" y="52" width="10" height="16" rx="5" fill="'+p.acc+'"/>'
-  if (id === 'mira') return '<path d="M31 68v4M89 68v4" stroke="'+p.acc+'" stroke-width="1.8" stroke-linecap="round"/>'
-    + '<circle cx="31" cy="74" r="3" fill="'+p.acc+'"/><circle cx="89" cy="74" r="3" fill="'+p.acc+'"/>'
-  if (id === 'kai') return '<path d="M32 36c0-16 12-26 28-26s28 10 28 26z" fill="'+p.acc+'"/>'
-    + '<rect x="29" y="33" width="62" height="8" rx="4" fill="'+p.acc+'"/><circle cx="60" cy="9" r="4.5" fill="'+p.cloth+'"/>'
-  return '<circle cx="30" cy="58" r="4" fill="'+p.acc+'"/><circle cx="90" cy="58" r="4" fill="'+p.acc+'"/>'
-}
-
-/* 표정. src/presentation/characters/expressions.ts 와 같은 뜻 */
-function face(expr, p) {
-  var closed = expr === 'sleeping' || expr === 'disconnected'
-  var eyes = closed
-    ? '<path d="M44 55h9" stroke="'+p.line+'" stroke-width="2" stroke-linecap="round"/>'
-      + '<path d="M67 55h9" stroke="'+p.line+'" stroke-width="2" stroke-linecap="round"/>'
-    : '<ellipse cx="48.5" cy="55" rx="4" ry="5" fill="'+p.line+'"/>'
-      + '<ellipse cx="71.5" cy="55" rx="4" ry="5" fill="'+p.line+'"/>'
-      + '<circle cx="50" cy="53" r="1.4" fill="'+p.skin+'"/><circle cx="73" cy="53" r="1.4" fill="'+p.skin+'"/>'
-
-  var mouth = expr === 'speaking'
-    ? '<ellipse cx="60" cy="70" rx="6.5" ry="6" fill="'+p.mouth+'"/>'
-    : '<path d="M52 70q8 '+(expr === 'disconnected' ? '-3' : '5')+' 16 0" stroke="'+p.mouth+'" stroke-width="2.2" stroke-linecap="round" fill="none"/>'
-
-  var blush = closed ? '' :
-    '<g opacity=".45"><ellipse cx="40" cy="64" rx="5" ry="3" fill="'+p.blush+'"/><ellipse cx="80" cy="64" rx="5" ry="3" fill="'+p.blush+'"/></g>'
-
-  var zzz = expr === 'sleeping'
-    ? '<g opacity=".75"><path d="M92 26h8l-8 9h8" stroke="'+p.line+'" stroke-width="2" fill="none" stroke-linecap="round"/>'
-      + '<path d="M104 14h6l-6 7h6" stroke="'+p.line+'" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>'
-    : ''
-
-  var dots = expr === 'typing'
-    ? '<g><circle cx="84" cy="22" r="3" fill="'+p.acc+'" opacity=".9"/><circle cx="94" cy="22" r="3" fill="'+p.acc+'" opacity=".6"/><circle cx="104" cy="22" r="3" fill="'+p.acc+'" opacity=".35"/></g>'
-    : ''
-
-  return eyes + mouth + blush + zzz + dots
-}
-
-function character(id, expr, size) {
-  var p = PALETTE[id] || PALETTE.aria
-  var gray = expr === 'disconnected'
-  if (gray) {
-    p = { skin:'#4A5268', shade:'#3C4257', hair:'#39415A', hairDark:'#2E3550',
-          acc:'#4A5268', cloth:'#39415A', line:'#5C6780', mouth:'#2A3045', blush:'#4A5268' }
-  }
-
-  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 120 120">'
-    + '<path d="M22 120c0-16 17-27 38-27s38 11 38 27z" fill="'+p.cloth+'"/>'
-    + '<rect x="52" y="78" width="16" height="16" fill="'+p.shade+'"/>'
-    + '<ellipse cx="60" cy="56" rx="30" ry="33" fill="'+p.skin+'"/>'
-    + hair(id, p) + face(expr, p) + accessory(id, p)
-    + '</svg>'
-}
-
-/* 이모티콘. 자세만 다르다 */
-function sticker(id, pose, size) {
-  var p = PALETTE[id] || PALETTE.aria
-  var extra = ''
-  var mouth = '<path d="M53 71q7 5 14 0" stroke="'+p.mouth+'" stroke-width="2.4" stroke-linecap="round" fill="none"/>'
-  var eyes = '<ellipse cx="49" cy="57" rx="4" ry="5" fill="'+p.line+'"/><ellipse cx="71" cy="57" rx="4" ry="5" fill="'+p.line+'"/>'
-  var hands = ''
-
-  if (pose === 'heart') {
-    extra = '<path d="M96 30c0-5 7-6 8-1 1-5 8-4 8 1 0 6-8 11-8 11s-8-5-8-11z" fill="#F87171"/>'
-  } else if (pose === 'laugh') {
-    eyes = '<path d="M44 58q5-5 10 0" stroke="'+p.line+'" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
-      + '<path d="M66 58q5-5 10 0" stroke="'+p.line+'" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
-    mouth = '<ellipse cx="60" cy="72" rx="9" ry="7" fill="'+p.mouth+'"/>'
-  } else if (pose === 'sleep') {
-    eyes = '<path d="M44 56q5 5 10 0" stroke="'+p.line+'" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
-      + '<path d="M66 56q5 5 10 0" stroke="'+p.line+'" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
-    extra = '<path d="M92 24h9l-9 10h9" stroke="'+p.line+'" stroke-width="2.2" fill="none" stroke-linecap="round"/>'
-  } else if (pose === 'wave') {
-    hands = '<circle cx="97" cy="52" r="9" fill="'+p.skin+'"/><path d="M92 60 86 78" stroke="'+p.cloth+'" stroke-width="9" stroke-linecap="round"/>'
-  } else if (pose === 'thumbsUp') {
-    hands = '<circle cx="95" cy="78" r="10" fill="'+p.skin+'"/><path d="M95 72v-9" stroke="'+p.shade+'" stroke-width="6" stroke-linecap="round"/>'
-  } else if (pose === 'eat') {
-    hands = '<circle cx="92" cy="82" r="9" fill="'+p.skin+'"/><path d="M88 78 74 68M92 79 78 70" stroke="'+p.acc+'" stroke-width="2.4" stroke-linecap="round"/>'
-    mouth = '<ellipse cx="60" cy="72" rx="7" ry="6" fill="'+p.mouth+'"/>'
-  } else if (pose === 'cry') {
-    eyes = '<path d="M44 56q5 5 10 0" stroke="'+p.line+'" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
-      + '<path d="M66 56q5 5 10 0" stroke="'+p.line+'" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
-    mouth = '<ellipse cx="60" cy="73" rx="6" ry="5" fill="'+p.mouth+'"/>'
-    extra = '<path d="M47 62q-2 8 1 12" stroke="#5CC8FF" stroke-width="3" fill="none" stroke-linecap="round"/>'
-      + '<path d="M73 62q2 8-1 12" stroke="#5CC8FF" stroke-width="3" fill="none" stroke-linecap="round"/>'
-  } else if (pose === 'bored') {
-    mouth = '<path d="M53 73q7 -3 14 0" stroke="'+p.mouth+'" stroke-width="2.4" stroke-linecap="round" fill="none"/>'
-    hands = '<circle cx="44" cy="82" r="9" fill="'+p.skin+'"/><path d="M40 90 34 104" stroke="'+p.cloth+'" stroke-width="9" stroke-linecap="round"/>'
-    extra = '<g opacity=".6"><circle cx="97" cy="30" r="2.5" fill="'+p.line+'"/><circle cx="105" cy="30" r="2.5" fill="'+p.line+'"/><circle cx="113" cy="30" r="2.5" fill="'+p.line+'"/></g>'
-  }
-
-  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 120 120">'
-    + '<path d="M28 120c0-15 15-25 32-25s32 10 32 25z" fill="'+p.cloth+'"/>'
-    + '<rect x="53" y="80" width="14" height="14" fill="'+p.shade+'"/>'
-    + '<ellipse cx="60" cy="58" rx="28" ry="30" fill="'+p.skin+'"/>'
-    + '<path d="M32 56c0-18 12-29 28-29s28 11 28 29c-3-8-8-12-13-13-7 4-23 4-30 0-5 1-10 5-13 13z" fill="'+p.hair+'"/>'
-    + eyes + mouth + hands + extra + '</svg>'
-}
-
-/* 아이콘. src/presentation/components/Icon.tsx 와 같은 모양 */
-function icon(name, size, color) {
-  var s = size || 20, c = color || 'currentColor'
-  var d = {
-    phone: '<path d="M6.5 3h3l1.5 4-2 1.5a12 12 0 0 0 6.5 6.5L17 13l4 1.5v3a2 2 0 0 1-2.2 2A17 17 0 0 1 4.5 5.2 2 2 0 0 1 6.5 3Z"/>',
-    phoneOff: '<path d="M10.7 5.6 9.5 3h-3a2 2 0 0 0-2 2.2 17 17 0 0 0 5 10.6M14 17.2a17 17 0 0 0 4.8 2.3A2 2 0 0 0 21 17.5v-3L17 13l-1.5 2"/><line x1="3" y1="3" x2="21" y2="21"/>',
-    video: '<rect x="2" y="6" width="13" height="12" rx="2.5"/><path d="m15 11 6-3.5v9L15 13z"/>',
-    mic: '<path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><line x1="12" y1="18" x2="12" y2="21"/>',
-    heart: '<path d="M12 20s-7.5-4.8-7.5-10A4.5 4.5 0 0 1 12 7.6 4.5 4.5 0 0 1 19.5 10c0 5.2-7.5 10-7.5 10Z"/>',
-    photo: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.8"/><path d="m4 17 5-5 4 4 3-2 4 4"/>',
-    chat: '<path d="M21 12a8 8 0 0 1-11.3 7.3L4 21l1.7-5.7A8 8 0 1 1 21 12Z"/>',
-    alert: '<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r=".6"/>',
-    send: '<path d="M21 3 10.5 13.5"/><path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z"/>',
-    check: '<path d="m5 12.5 4.5 4.5L19 7"/>',
-    checkDouble: '<path d="m2 12.5 4 4L13.5 8"/><path d="m10 16.5 1.5 1.5L21 8"/>',
-    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>',
-    wifi: '<path d="M2 8.5a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8.5 15.5a6 6 0 0 1 7 0"/><circle cx="12" cy="19" r=".8"/>'
-  }[name] || ''
-
-  return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="'+c
-    + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'
-}
-
-/* ═══════════════════════════════════════════════════
-   상태
-
-   실제 앱의 useChatStore / useCallStore 가 들고 있는 것과
-   같은 모양이다.
-   ═══════════════════════════════════════════════════ */
-
-var state = {
-  scene: 'connect',           /* connect | chat | drop | call */
-  theme: 'dark',
-  typing: { host: false, guest: false },
-  drawer: { host: false, guest: false },
-  battery: false,
-  call: null,                 /* { phase, who, talking, since } */
-  messages: [],               /* { id, from, text, kind, pose, at, read } */
-  nextId: 1
-}
-
-var PEOPLE = {
-  host:  { name: '나',   char: 'orion', peerName: '지민', peerChar: 'mira', role: 'host' },
-  guest: { name: '지민', char: 'mira',  peerName: '나',   peerChar: 'orion', role: 'guest' }
-}
-
-var HOTSPOT = 'ybbarng-hotspot'
-
-/* ── 문구. src/presentation/copy/connecting.ts 와 같은 말 ── */
-function phaseCopy(phase, peerName) {
-  switch (phase) {
-    case 'need-hotspot': return {
-      title: '핫스팟이 꺼져 있어요',
-      detail: '켜주시면 ' + peerName + '님이 바로 들어와요.\n비행기 모드를 켜면 같이 꺼지니 그때마다 다시 켜주세요.',
-      action: '핫스팟 켜러 가기'
-    }
-    case 'waiting-for-peer': return {
-      title: '준비됐어요',
-      detail: peerName + '님이 들어오기를 기다리는 중이에요.\n들어오면 바로 알려드릴게요.'
-    }
-    case 'need-wifi': return {
-      title: 'Wi-Fi 에 들어가면 돼요',
-      detail: 'Wi-Fi 목록에서 ' + HOTSPOT + ' 를 골라주세요.\n안 보이면 ' + peerName + '님이 잠시 껐을 수도 있어요. 곧 다시 켜질 거예요.',
-      action: 'Wi-Fi 고르러 가기'
-    }
-    case 'looking': return { title: '거의 다 됐어요', detail: '근처를 둘러보는 중이에요. 곧 만나요.' }
-    case 'found': return { title: peerName + '님을 찾았어요', detail: '바로 이어드릴게요.' }
-    case 'recovering': return { title: '잠깐 멀어졌어요', detail: '알아서 다시 이어드릴게요. 그동안 쓴 말은 사라지지 않아요.' }
-    default: return { title: '', detail: '' }
-  }
-}
-
-function phaseOf(side) {
-  var p = PEOPLE[side]
-  if (state.scene === 'connect') return p.role === 'host' ? 'need-hotspot' : 'need-wifi'
-  if (state.scene === 'drop') return p.role === 'host' ? 'need-hotspot' : 'need-wifi'
-  return null
-}
-
-function connected() { return state.scene === 'chat' || state.scene === 'call' }
-
-/* ═══════════════════════════════════════════════════
-   그리기
-   ═══════════════════════════════════════════════════ */
-
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-}
-
-function clock(at) {
-  var d = new Date(at)
-  var h = d.getHours(), m = ('0'+d.getMinutes()).slice(-2)
-  var ap = h < 12 ? '오전' : '오후'
-  var hh = h % 12 === 0 ? 12 : h % 12
-  return ap + ' ' + hh + ':' + m
-}
-
-function renderLinkbar(side) {
-  if (state.scene === 'drop') {
-    return '<div class="linkbar bad">' + icon('alert', 13, 'currentColor') + '연결이 끊겼어요 · 다시 붙는 중</div>'
-  }
-  if (connected()) {
-    return '<div class="linkbar ok">' + icon('wifi', 13, 'currentColor') + '연결됨</div>'
-  }
-  return '<div class="linkbar idle">' + icon('wifi', 13, 'currentColor') + '상대를 찾는 중...</div>'
-}
-
-function renderBattery(side) {
-  if (!state.battery) return ''
-  var p = PEOPLE[side]
-  var text = p.role === 'host'
-    ? '배터리가 18%예요. 핫스팟이 배터리를 많이 써요. 보조 배터리를 꽂아주세요'
-    : p.peerName + '님 폰이 18% 남았어요'
-  return '<div class="notice">' + icon('alert', 13, 'currentColor') + esc(text) + '</div>'
-}
-
-function renderPeerHead(side) {
-  var p = PEOPLE[side]
-  var typing = state.typing[side === 'host' ? 'guest' : 'host']
-  var expr = !connected() ? 'disconnected' : (typing ? 'typing' : 'idle')
-  var stateText = !connected() ? '연결을 기다리는 중' : (typing ? '입력 중...' : '연결됨')
-
-  var acts = connected()
-    ? '<div class="acts"><button data-call="'+side+'">'+icon('phone',21)+'</button>'
-      + '<button data-video="'+side+'">'+icon('video',21)+'</button></div>'
-    : ''
-
-  return '<div class="peerhead">'
-    + character(p.peerChar, expr, 38)
-    + '<div class="who"><div class="name">'+esc(p.peerName)+'</div><div class="state">'+stateText+'</div></div>'
-    + acts + '</div>'
-}
-
-function renderConnecting(side) {
-  var p = PEOPLE[side]
-  var phase = phaseOf(side)
-  var copy = phaseCopy(phase, p.peerName)
-  var expr = 'sleeping'
-
-  var hint = state.scene === 'drop' && p.role === 'guest'
-    ? '<div class="hint"><b>목록에 안 보이나요?</b><ul>'
-      + '<li>' + esc(p.peerName) + '님 쪽에서 아직 안 켰을 수도 있어요. 조금 뒤에 다시 보세요</li>'
-      + '<li>목록에 ' + HOTSPOT + ' 가 있는지 보고, 없으면 아래로 당겨 새로고침해 보세요</li>'
-      + '<li>비행기 모드를 켰어도 Wi-Fi 는 따로 켤 수 있어요</li></ul></div>'
-    : ''
-
-  return '<div class="connecting">'
-    + '<div style="opacity:.45">' + character(p.peerChar, expr, 110) + '</div>'
-    + '<h2>' + esc(copy.title) + '</h2>'
-    + '<p>' + esc(copy.detail) + '</p>'
-    + (copy.action ? '<button class="action">' + esc(copy.action) + '</button>' : '')
-    + hint
-    + '</div>'
-}
-
-function renderLog(side) {
-  var p = PEOPLE[side]
-  var out = ''
-  var lastDay = null
-  var prevFrom = null
-
-  for (var i = 0; i < state.messages.length; i++) {
-    var m = state.messages[i]
-    var day = new Date(m.at).toDateString()
-
-    if (day !== lastDay) {
-      out += '<div class="daypill"><span>오늘</span></div>'
-      lastDay = day
-      prevFrom = null
-    }
-
-    if (m.kind === 'system') {
-      out += '<div class="sysline">' + esc(m.text) + '</div>'
-      prevFrom = null
-      continue
-    }
-
-    var mine = m.from === side
-    var grouped = prevFrom === m.from
-    var next = state.messages[i+1]
-    var showMeta = !next || next.from !== m.from || next.kind === 'system'
-
-    var body = m.kind === 'sticker'
-      ? '<div class="bubble bare">' + sticker(PEOPLE[m.from].char, m.pose, 108) + '</div>'
-      : '<div class="bubble">' + esc(m.text) + '</div>'
-
-    var meta = showMeta
-      ? '<div class="meta">' + clock(m.at)
-        + (mine ? (m.read ? icon('checkDouble',13,'var(--peer)') : icon('check',13,'var(--faint)')) : '')
-        + '</div>'
-      : ''
-
-    out += '<div class="row' + (mine ? ' mine' : '') + (grouped ? ' grouped' : '') + '">'
-      + body + meta + '</div>'
-
-    prevFrom = m.from
-  }
-
-  if (state.typing[side === 'host' ? 'guest' : 'host']) {
-    out += '<div class="typing"><i></i><i></i><i></i></div>'
-  }
-
-  if (state.messages.length === 0) {
-    out = '<div style="flex:1;display:grid;place-items:center;text-align:center;gap:6px">'
-      + '<div style="color:var(--muted);font-weight:600">아직 주고받은 말이 없어요</div>'
-      + '<div style="color:var(--faint);font-size:12px">연결되지 않았어도 괜찮아요.<br>써두면 연결될 때 전해집니다.</div></div>'
-  }
-
-  return '<div class="log" id="log-'+side+'">' + out + '</div>'
-}
-
-var POSES = ['wave','heart','laugh','cry','thumbsUp','eat','sleep','bored']
-
-function renderDrawer(side) {
-  if (!state.drawer[side]) return ''
-  var p = PEOPLE[side]
-  var strip = ''
-  for (var i = 0; i < POSES.length; i++) {
-    strip += '<button data-pose="'+POSES[i]+'" data-side="'+side+'">'
-      + sticker(p.char, POSES[i], 64) + '</button>'
-  }
-  return '<div class="drawer"><div class="head"><span>누르면 바로 보내져요</span>'
-    + '<button data-closedrawer="'+side+'">닫기</button></div>'
-    + '<div class="strip">' + strip + '</div></div>'
-}
-
-function renderComposer(side) {
-  return '<div class="composer">'
-    + '<button class="tool" data-nudge="'+side+'" title="콕 찌르기">' + icon('alert', 20) + '</button>'
-    + '<button class="tool" data-drawer="'+side+'" title="이모티콘">' + icon('heart', 20) + '</button>'
-    + '<button class="tool" title="사진">' + icon('photo', 20) + '</button>'
-    + '<input placeholder="말을 적어보세요" data-input="'+side+'">'
-    + '<button class="send" data-send="'+side+'">' + icon('send', 17, 'currentColor') + '</button>'
-    + '</div>'
-}
-
-function renderCall(side) {
-  if (!state.call) return ''
-  var p = PEOPLE[side]
-  var c = state.call
-  var incoming = c.who !== side && c.phase === 'ringing'
-
-  var phaseText = c.phase === 'ringing'
-    ? (incoming ? p.peerName + '님이 부르고 있어요' : p.peerName + '님을 부르는 중')
-    : (c.phase === 'active' ? '통화 중' : '이어지는 중')
-
-  var secs = c.phase === 'active' ? Math.floor((Date.now() - c.since) / 1000) : 0
-  var timer = c.phase === 'active'
-    ? '<div class="timer">' + Math.floor(secs/60) + ':' + ('0'+(secs%60)).slice(-2) + '</div>'
-    : ''
-
-  var controls
-  if (incoming) {
-    controls = '<div class="callbtns">'
-      + '<div class="rbtn decline"><button data-hangup="1">'+icon('phoneOff',26,'var(--on-status)')+'</button><span class="lbl">거절</span></div>'
-      + '<div class="rbtn accept"><button data-accept="1">'+icon('phone',26,'var(--on-status)')+'</button><span class="lbl">받기</span></div>'
-      + '</div>'
-  } else if (c.phase === 'active') {
-    controls = '<button class="ptt' + (c.talking ? ' talking' : '') + '" data-ptt="'+side+'">'
-      + icon('mic', 38) + '<span>' + (c.talking ? '말하는 중' : '누르고 말하기') + '</span></button>'
-      + '<div style="font-size:11px;color:var(--faint)">위로 밀면 계속 켜져요</div>'
-      + '<div class="callbtns"><div class="rbtn decline"><button data-hangup="1">'
-      + icon('phoneOff',26,'var(--on-status)')+'</button><span class="lbl">끊기</span></div></div>'
-  } else {
-    controls = '<div class="callbtns"><div class="rbtn decline"><button data-hangup="1">'
-      + icon('phoneOff',26,'var(--on-status)')+'</button><span class="lbl">끊기</span></div></div>'
-  }
-
-  var expr = c.phase === 'active' ? 'speaking' : 'idle'
-
-  return '<div class="call">'
-    + character(p.peerChar, expr, 150)
-    + '<div><div class="name">'+esc(p.peerName)+'</div><div class="phase">'+phaseText+'</div>'+timer+'</div>'
-    + controls + '</div>'
-}
-
-function renderPhone(side) {
-  var inner = connected()
-    ? renderLog(side) + renderDrawer(side) + renderComposer(side)
-    : renderConnecting(side)
-
-  return '<div class="statusbar"><span>' + clock(Date.now()) + '</span>'
-    + '<span>✈︎ ' + (state.battery ? '18%' : '82%') + '</span></div>'
-    + renderLinkbar(side)
-    + renderBattery(side)
-    + (connected() ? renderPeerHead(side) : '')
-    + inner
-    + renderCall(side)
-}
-
-function render() {
-  var keep = {}
-  ;['host','guest'].forEach(function (side) {
-    var input = document.querySelector('[data-input="'+side+'"]')
-    if (input) keep[side] = { value: input.value, focused: document.activeElement === input }
-  })
-
-  document.getElementById('screen-host').innerHTML = renderPhone('host')
-  document.getElementById('screen-guest').innerHTML = renderPhone('guest')
-
-  ;['host','guest'].forEach(function (side) {
-    var log = document.getElementById('log-'+side)
-    if (log) log.scrollTop = log.scrollHeight
-
-    var input = document.querySelector('[data-input="'+side+'"]')
-    if (input && keep[side]) {
-      input.value = keep[side].value
-      if (keep[side].focused) input.focus()
-    }
-  })
-
-  document.getElementById('btn-typing').classList.toggle('on', state.typing.host || state.typing.guest)
-  document.getElementById('btn-battery').classList.toggle('on', state.battery)
-  ;['connect','chat','drop','call'].forEach(function (s) {
-    document.getElementById('btn-scene-'+s).classList.toggle('on', state.scene === s)
-  })
-}
-
-/* ═══════════════════════════════════════════════════
-   주고받기
-
-   한쪽에서 보내면 반대쪽 화면에 뜬다. 실제 앱과 같은 흐름이다.
-   보낸 쪽에는 ✓ 가 뜨고, 상대가 보면 ✓✓ 로 바뀐다.
-   ═══════════════════════════════════════════════════ */
-
-function push(from, payload) {
-  var m = Object.assign({ id: state.nextId++, from: from, at: Date.now(), read: false }, payload)
-  state.messages.push(m)
-
-  // 상대가 화면을 보고 있으면 곧 읽음이 된다.
-  // 실제 앱도 화면에 보이는 동안 읽음으로 친다.
-  if (m.kind !== 'system') {
-    setTimeout(function () { m.read = true; render() }, 900)
-  }
-
-  render()
-}
-
-function sendText(side) {
-  var input = document.querySelector('[data-input="'+side+'"]')
-  if (!input) return
-  var text = input.value.trim()
-  if (!text) return
-
-  input.value = ''
-  state.typing[side] = false
-  push(side, { kind: 'text', text: text })
-
-  // 상대가 답을 쓰는 것처럼 보이게 한다
-  var other = side === 'host' ? 'guest' : 'host'
-  clearTimeout(window.__replyTimer)
-  window.__replyTimer = setTimeout(function () {
-    state.typing[other] = true
-    render()
-    setTimeout(function () {
-      state.typing[other] = false
-      push(other, { kind: 'text', text: pickReply(text) })
-    }, 1400)
-  }, 700)
-}
-
-var REPLIES = [
-  '응 알겠어', '나도 그래 ㅎㅎ', '창밖 봐 구름 예쁘다', '기내식 뭐 골랐어?',
-  '조금 자다 올게', '지금 34열이야', '괜찮아 걱정 마', '곧 도착이래'
-]
-
-function pickReply(said) {
-  if (said.indexOf('?') >= 0) return '응 맞아'
-  return REPLIES[Math.floor(Math.random() * REPLIES.length)]
-}
-
-/* ═══════════════════════════════════════════════════
-   조작
-   ═══════════════════════════════════════════════════ */
-
-document.addEventListener('click', function (e) {
-  var t = e.target.closest('[data-send],[data-nudge],[data-drawer],[data-closedrawer],[data-pose],[data-call],[data-video],[data-accept],[data-hangup],[data-ptt]')
-  if (!t) return
-
-  if (t.dataset.send) return sendText(t.dataset.send)
-
-  if (t.dataset.nudge) {
-    push(t.dataset.nudge, { kind: 'text', text: '콕 찔렀어요' })
-    return
-  }
-
-  if (t.dataset.drawer) {
-    var s = t.dataset.drawer
-    state.drawer[s] = !state.drawer[s]
-    return render()
-  }
-
-  if (t.dataset.closedrawer) {
-    state.drawer[t.dataset.closedrawer] = false
-    return render()
-  }
-
-  if (t.dataset.pose) {
-    var side = t.dataset.side
-    state.drawer[side] = false
-    push(side, { kind: 'sticker', pose: t.dataset.pose })
-    return
-  }
-
-  if (t.dataset.call || t.dataset.video) {
-    var caller = t.dataset.call || t.dataset.video
-    state.call = { phase: 'ringing', who: caller, talking: false, since: Date.now() }
-    state.scene = 'call'
-    return render()
-  }
-
-  if (t.dataset.accept) {
-    state.call.phase = 'active'
-    state.call.since = Date.now()
-    return render()
-  }
-
-  if (t.dataset.hangup) {
-    state.call = null
-    state.scene = 'chat'
-    push('host', { kind: 'system', text: '통화가 끝났어요' })
-    return
-  }
-
-  if (t.dataset.ptt) {
-    state.call.talking = !state.call.talking
-    return render()
-  }
-})
-
-/* 입력 중 표시. 실제 앱도 글자를 치면 상대에게 알린다 */
-document.addEventListener('input', function (e) {
-  var side = e.target.dataset && e.target.dataset.input
-  if (!side) return
-
-  state.typing[side] = e.target.value.length > 0
-  render()
-})
-
-document.addEventListener('keydown', function (e) {
-  var side = e.target.dataset && e.target.dataset.input
-  if (side && e.key === 'Enter') sendText(side)
-})
-
-/* ── 장면 바꾸기 ── */
-function setScene(scene) {
-  state.scene = scene
-  state.call = scene === 'call'
-    ? { phase: 'ringing', who: 'host', talking: false, since: Date.now() }
-    : null
-
-  if (scene === 'chat' && state.messages.length === 0) seed()
-  if (scene === 'drop') {
-    push('host', { kind: 'system', text: '연결이 끊겼어요' })
-  }
-  render()
-}
-
-document.getElementById('btn-scene-connect').onclick = function () { setScene('connect') }
-document.getElementById('btn-scene-chat').onclick = function () { setScene('chat') }
-document.getElementById('btn-scene-drop').onclick = function () { setScene('drop') }
-document.getElementById('btn-scene-call').onclick = function () { setScene('call') }
-
-document.getElementById('btn-typing').onclick = function () {
-  var on = !(state.typing.host || state.typing.guest)
-  state.typing.host = false
-  state.typing.guest = on
-  render()
-}
-
-document.getElementById('btn-sticker').onclick = function () {
-  var on = !(state.drawer.host || state.drawer.guest)
-  state.drawer.host = on
-  state.drawer.guest = on
-  render()
-}
-
-document.getElementById('btn-battery').onclick = function () {
-  state.battery = !state.battery
-  render()
-}
-
-document.getElementById('btn-theme').onclick = function () {
-  state.theme = state.theme === 'dark' ? 'light' : 'dark'
-  document.body.classList.toggle('light', state.theme === 'light')
-  this.textContent = state.theme === 'dark' ? '밝은 화면으로' : '어두운 화면으로'
-  render()
-}
-
-/* 대화 예시를 깔아둔다 */
-function seed() {
-  var now = Date.now()
-  var lines = [
-    ['host', 'text', '자리 앉았어?'],
-    ['guest', 'text', '응 나 12열 통로야'],
-    ['host', 'text', '나는 34열 창가. 멀다 ㅠ'],
-    ['guest', 'sticker', 'cry'],
-    ['host', 'text', '기내식 나오면 알려줘'],
-    ['guest', 'text', '알겠어 ㅎㅎ']
-  ]
-
-  lines.forEach(function (l, i) {
-    state.messages.push({
-      id: state.nextId++,
-      from: l[0],
-      kind: l[1],
-      text: l[1] === 'text' ? l[2] : '',
-      pose: l[1] === 'sticker' ? l[2] : '',
-      at: now - (lines.length - i) * 60000,
-      read: true
-    })
-  })
-}
-
-/* 통화 시간이 흐르게 */
-setInterval(function () {
-  if (state.call && state.call.phase === 'active') render()
-}, 1000)
-
-setScene('connect')
-</script>
+<script type="module" src="./app.js"></script>

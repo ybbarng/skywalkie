@@ -35,6 +35,9 @@ assets/icon/generated/
 build/
 .gradle/
 
+# 데모를 묶은 결과물 (pnpm demo 로 다시 만든다)
+demo/app.js
+
 # 테스트
 coverage/
 .vitest/
