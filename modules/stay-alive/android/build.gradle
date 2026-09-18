@@ -1,0 +1,26 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.ybbarng.skywalkie'
+version = '1.0.0'
+
+android {
+  namespace 'com.ybbarng.skywalkie.stayalive'
+
+  // expo-module-gradle-plugin 이 이 둘을 요구한다. 없으면 설정 단계에서 멎는다.
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // `HeadlessJsTaskService` 를 쓰려면 필요하다. expo-modules-core 가
+  // 이걸 `implementation` 으로 들고 있어서 우리에게까지 안 넘어온다.
+  //
+  // 판은 루트(expo-root-project)가 깔아둔다. 버전을 적지 않는 이유는
+  // React Native 가 자기 버전으로 맞춰주기 때문이다.
+  implementation 'com.facebook.react:react-android'
+}

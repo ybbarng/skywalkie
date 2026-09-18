@@ -1,0 +1,23 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <!--
+    뒤로 가도 살아 있게 해주는 서비스.
+
+    `connectedDevice` 를 고른 이유: 이 서비스가 하는 일이 정확히
+    "곁에 있는 다른 기기와 주고받기" 다. `dataSync` 는 안드로이드 15
+    부터 하루 6시간으로 묶이고 그 뒤 12시간 동안 다시 못 켠다.
+    비행이 세 시간이라 당장은 괜찮지만, 여유를 둘 이유가 없다.
+
+    `stopWithTask="false"` 인 이유: 최근 앱 목록에서 쓸어 넘겨도
+    대화는 이어져야 한다. 사람이 앱을 지운 게 아니라 화면만 치운 것이다.
+  -->
+  <application>
+    <service
+      android:name=".StayAliveService"
+      android:enabled="true"
+      android:exported="false"
+      android:stopWithTask="false"
+      android:foregroundServiceType="connectedDevice" />
+  </application>
+
+</manifest>

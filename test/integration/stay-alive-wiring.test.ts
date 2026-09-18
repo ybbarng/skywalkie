@@ -93,6 +93,36 @@ describe('모듈 설정', () => {
   })
 })
 
+/**
+ * **손으로 쓴 네이티브 코드가 저장소에 들어 있어야 한다.**
+ *
+ * `.gitignore` 에 `android/` 라고만 적으면 어느 깊이든 그 이름의
+ * 폴더를 다 잡는다. Expo 가 만드는 최상위 `android/` 뿐 아니라
+ * 우리가 쓴 모듈 안의 `android` 폴더까지 사라진다.
+ *
+ * 그러면 **새로 받은 사람은 빌드를 못 한다.** 내 컴퓨터에서는 잘
+ * 되니 알아채기도 어렵다. 실제로 블루투스 Swift 코드가 이렇게
+ * 한동안 빠져 있었다.
+ */
+describe('네이티브 코드가 저장소에 남는다', () => {
+  const ignore = readFileSync(join(root, '.gitignore'), 'utf8')
+
+  it('최상위만 가리킨다', () => {
+    expect(ignore).toContain('/android/')
+    expect(ignore).toContain('/ios/')
+  })
+
+  it('깊이 상관없이 잡는 줄이 없다', () => {
+    const lines = ignore
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && !line.startsWith('#'))
+
+    expect(lines).not.toContain('android/')
+    expect(lines).not.toContain('ios/')
+  })
+})
+
 describe('없어도 앱은 돈다', () => {
   it('맨 위에서 네이티브 모듈을 들여오지 않는다', () => {
     // 아이폰에는 이 모듈이 아예 없다. 맨 위에서 들여오면 앱이 안 켜진다.
