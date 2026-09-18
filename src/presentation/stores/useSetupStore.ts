@@ -73,7 +73,8 @@ export const useSetupStore = create<SetupState>((set, get) => ({
 
     await persistProfile(set, {
       peerId: makePeerId(),
-      displayName: '나',
+      // 이름은 첫 실행 안내에서 직접 적는다
+      displayName: '',
       character: role === 'host' ? 'orion' : 'aria',
       pairingCode: generatePairingCode(Math.random),
       role,
@@ -81,17 +82,23 @@ export const useSetupStore = create<SetupState>((set, get) => ({
   },
 
   async chooseCharacter(character) {
+    // 프로필이 아직 없을 수 있다. 화면이 뜨자마자 누르면 그렇다.
+    await get().ensureProfile()
+
     const current = get().profile
     if (current === null) return
     await persistProfile(set, { ...current, character })
   },
 
   async setDisplayName(displayName) {
+    await get().ensureProfile()
+
     const current = get().profile
     if (current === null) return
-    const trimmed = displayName.trim()
-    if (trimmed.length === 0) return
-    await persistProfile(set, { ...current, displayName: trimmed.slice(0, 20) })
+    await persistProfile(set, {
+      ...current,
+      displayName: displayName.trim().slice(0, 20),
+    })
   },
 
   async chooseAudioMode(audioMode) {

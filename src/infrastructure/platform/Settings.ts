@@ -13,7 +13,8 @@ import { ok, type Result } from '@/domain/shared/Result'
 
 const profileSchema = z.object({
   peerId: z.string().min(8).max(64),
-  displayName: z.string().min(1).max(20),
+  // 처음에는 비어 있다. 첫 실행 안내에서 채운다.
+  displayName: z.string().max(20),
   character: z.enum(characterIds),
   pairingCode: z.string().length(6),
   /** 핫스팟을 연 쪽인가 붙는 쪽인가 */

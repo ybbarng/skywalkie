@@ -33,34 +33,34 @@ export interface ConnectStep {
 export const connectSteps: Record<Role, readonly ConnectStep[]> = {
   host: [
     {
-      title: '비행기 모드를 켜요',
-      detail: '기내에서는 켜야 해요. 집에서 미리 해볼 때도 똑같이 켜보세요.',
-    },
-    {
       title: '핫스팟을 켜요',
-      detail:
-        '내 폰이 작은 Wi-Fi 공유기가 돼요. 인터넷이 없어도 두 폰을 이어줍니다.\n비행기 모드를 켠 뒤에도 따로 켤 수 있어요.',
+      detail: '내 폰이 작은 Wi-Fi 공유기가 돼요. 인터넷이 없어도 두 폰을 이어줍니다.',
       opensSettings: true,
     },
     {
-      title: '핫스팟 이름과 비밀번호를 보여줘요',
+      title: '이름과 비밀번호를 보여줘요',
       detail: '설정 화면에 떠 있어요. 상대가 그걸 보고 들어옵니다.',
+    },
+    {
+      title: '자리에 앉으면 핫스팟만 다시 켜요',
+      detail:
+        '비행기 모드를 켜면 핫스팟이 꺼져요. 다시 켜기만 하면 상대는 알아서 들어옵니다.',
     },
   ],
   guest: [
     {
-      title: '비행기 모드를 켜요',
-      detail: '기내에서는 켜야 해요. 집에서 미리 해볼 때도 똑같이 켜보세요.',
-    },
-    {
       title: '상대 폰 이름을 Wi-Fi 목록에서 골라요',
-      detail:
-        '상대가 보여주는 화면에 이름과 비밀번호가 떠 있어요.\n비행기 모드를 켠 뒤에도 Wi-Fi 는 따로 켤 수 있어요.',
+      detail: '상대가 보여주는 화면에 이름과 비밀번호가 떠 있어요.',
       opensSettings: true,
     },
     {
       title: '들어가면 알아서 찾아요',
       detail: '주소를 입력할 일은 없어요. 앱이 상대를 스스로 찾습니다.',
+    },
+    {
+      title: '자리에 앉으면 Wi-Fi 만 켜면 돼요',
+      detail:
+        '폰이 기억하고 있어서 비밀번호를 다시 넣을 일은 없어요. 알아서 다시 들어갑니다.',
     },
   ],
 }
@@ -92,6 +92,13 @@ export const audioModeChoice = {
     detail: '이어폰으로 듣고 말해요. 편하지만 음악 음질이 통화 내내 떨어집니다.',
     recommended: false,
   },
+} as const
+
+/** 연결 안내 맨 위에 붙이는 말 */
+export const connectIntro = {
+  host: '떨어져 앉기 전에 지금 해두세요. 한 번 이어두면 자리에서는 핫스팟만 다시 켜면 됩니다.',
+  guest:
+    '떨어져 앉기 전에 지금 해두세요. 한 번 들어가두면 폰이 기억해서 자리에서는 알아서 들어갑니다.',
 } as const
 
 export const welcome = {

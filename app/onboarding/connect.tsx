@@ -7,7 +7,7 @@ import { HelpTip } from '@/presentation/components/HelpTip'
 import { Icon } from '@/presentation/components/Icon'
 import { StepLayout } from '@/presentation/components/onboarding/StepLayout'
 import { Text } from '@/presentation/components/Text'
-import { connectSteps, roleReason } from '@/presentation/copy/onboarding'
+import { connectIntro, connectSteps, roleReason } from '@/presentation/copy/onboarding'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
 import { useTheme } from '@/presentation/theme/ThemeProvider'
 
@@ -30,12 +30,16 @@ export default function Connect() {
       step={4}
       totalSteps={4}
       title={role === 'host' ? '내가 이어줄게요' : '상대에게 들어갈게요'}
-      description={`${roleReason[role]}. 순서대로 하면 돼요.`}
+      description={`${roleReason[role]}.`}
       onPrimary={() => {
         void finishOnboarding().then(() => router.replace('/(tabs)/chat'))
       }}
       primaryLabel="시작하기"
     >
+      <Card raised style={{ marginBottom: theme.spacing.xs }}>
+        <Text variant="bodyStrong">{connectIntro[role]}</Text>
+      </Card>
+
       <View style={{ gap: theme.spacing.md }}>
         {steps.map((step, index) => (
           <Card key={step.title}>
