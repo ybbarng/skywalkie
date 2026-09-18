@@ -38,6 +38,8 @@ interface SetupState {
   /** 상대를 뭐라고 부를지. 비우면 "상대" 로 쓴다 */
   setPeerNickname(nickname: string): Promise<void>
   chooseAudioMode(audioMode: Preferences['audioMode']): Promise<void>
+  /** 새 말이 왔을 때 소리로 알릴까 진동으로 알릴까 */
+  chooseAlertMode(alertMode: Preferences['alertMode']): Promise<void>
   finishOnboarding(): Promise<void>
   restartOnboarding(): Promise<void>
   rememberPeer(peer: KnownPeer): Promise<void>
@@ -119,6 +121,10 @@ export const useSetupStore = create<SetupState>((set, get) => ({
 
   async chooseAudioMode(audioMode) {
     await persistPreferences(set, { ...get().preferences, audioMode })
+  },
+
+  async chooseAlertMode(alertMode) {
+    await persistPreferences(set, { ...get().preferences, alertMode })
   },
 
   async finishOnboarding() {

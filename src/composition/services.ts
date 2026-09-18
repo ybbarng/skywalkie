@@ -1,5 +1,7 @@
+import type { Vibration } from '@/application/ports/Vibration'
 import type { IdGenerator } from '@/domain/shared/IdGenerator'
 import { loadWebRtc } from '@/infrastructure/call/webrtcModule'
+import { HapticVibration } from '@/infrastructure/platform/HapticVibration'
 import { LocalNotifier } from '@/infrastructure/platform/LocalNotifier'
 import {
   defaultPreferences,
@@ -36,6 +38,15 @@ export const ids: IdGenerator = ulidGenerator
  * 하나만 두고 계속 쓴다. 매번 새로 만들면 권한을 다시 물어본다.
  */
 export const notifier = new LocalNotifier()
+
+/**
+ * 폰을 떨게 한다.
+ *
+ * 콕 찌르기, 마이크가 열렸을 때, 그리고 **앱을 보고 있는 동안 새 말이
+ * 왔을 때** 쓴다. 보고 있으면 잠금 화면 알림은 안 띄우는데, 다른
+ * 곳을 보고 있었을 수 있어서 손끝으로는 알린다.
+ */
+export const vibration: Vibration = new HapticVibration()
 
 export const makePeerId = makePeerIdImpl
 

@@ -76,7 +76,7 @@ export function useLinkNotifications(input: LinkNotificationsInput): void {
       const alert = alertFor(notice.kind, now.role, now.peerName)
       if (alert === null) return
 
-      void notifier.show(alert.title, alert.body, 'link')
+      void notifier.show(alert.title, alert.body, { kind: 'link' })
     }, TICK_MS)
 
     return () => clearInterval(timer)

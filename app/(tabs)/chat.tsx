@@ -178,6 +178,7 @@ export default function Chat() {
     me,
     peerName: peerLabel(peer, profile?.peerNickname),
     messages,
+    alertMode: preferences.alertMode,
   })
 
   // 끊긴 채로 오래 있으면 잠금 화면에 알린다.

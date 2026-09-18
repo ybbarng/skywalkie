@@ -8,7 +8,7 @@ import { Card } from '@/presentation/components/Card'
 import { HelpTip } from '@/presentation/components/HelpTip'
 import { Icon } from '@/presentation/components/Icon'
 import { Text } from '@/presentation/components/Text'
-import { audioModeChoice } from '@/presentation/copy/onboarding'
+import { alertModeChoice, audioModeChoice } from '@/presentation/copy/onboarding'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
 import { useTheme, useThemePreference } from '@/presentation/theme/ThemeProvider'
 import type { ThemePreference } from '@/presentation/theme/tokens'
@@ -29,6 +29,7 @@ export default function Settings() {
 
         <ConnectionSection />
         <AppearanceSection />
+        <AlertSection />
         <AudioSection />
         <ConversationSection />
         <AboutSection />
@@ -166,6 +167,56 @@ function AudioSection() {
           )
         })}
       </View>
+    </Section>
+  )
+}
+
+/**
+ * 새 말이 왔을 때 어떻게 알릴까.
+ *
+ * **앱을 안 보고 있을 때만 쓰는 설정이다.** 보고 있으면 화면에 이미
+ * 떠 있어서 잠금 화면 알림은 안 띄우고 짧게 떨기만 한다.
+ */
+function AlertSection() {
+  const theme = useTheme()
+  const preferences = useSetupStore(s => s.preferences)
+  const chooseAlertMode = useSetupStore(s => s.chooseAlertMode)
+
+  const modes = Object.keys(alertModeChoice) as Array<Preferences['alertMode']>
+
+  return (
+    <Section title="새 말이 오면">
+      <View style={{ gap: theme.spacing.sm }}>
+        {modes.map(mode => {
+          const choice = alertModeChoice[mode]
+          const active = preferences.alertMode === mode
+
+          return (
+            <Pressable
+              key={mode}
+              onPress={() => void chooseAlertMode(mode)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              style={{
+                borderRadius: theme.radius.md,
+                borderWidth: active ? 2 : 1,
+                borderColor: active ? theme.colors.me : theme.colors.border,
+                padding: theme.spacing.md,
+                gap: 2,
+              }}
+            >
+              <Text variant="bodyStrong">{choice.label}</Text>
+              <Text variant="caption" color="textMuted">
+                {choice.detail}
+              </Text>
+            </Pressable>
+          )
+        })}
+      </View>
+
+      <Text variant="caption" color="textMuted" style={{ marginTop: theme.spacing.sm }}>
+        연결이 끊겼다는 알림은 이 설정과 상관없이 울려요. 그걸 놓치면 말이 아예 안 갑니다.
+      </Text>
     </Section>
   )
 }

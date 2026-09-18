@@ -19,6 +19,21 @@ import { Platform } from 'react-native'
  * 것은 불편할 뿐이고, **여기서 앱이 죽으면 글도 못 쓴다.**
  */
 
+/** 새 말이 왔을 때 어떻게 알릴까 */
+export type AlertMode = 'sound' | 'vibrate' | 'silent'
+
+export interface NotifyHow {
+  /** 메시지인가 연결 상태인가. 연결은 늘 세게 알린다 */
+  readonly kind?: 'message' | 'link'
+  readonly alertMode?: AlertMode
+}
+
+/** 안드로이드는 통로마다 소리·진동이 박혀 있어 골라 써야 한다 */
+function channelFor(kind: 'message' | 'link', alertMode: AlertMode): string {
+  if (kind === 'link') return 'link'
+  return `messages-${alertMode}`
+}
+
 type LoadResult =
   // biome-ignore lint/suspicious/noExplicitAny: 네이티브 모듈이라 타입을 우리가 정하지 않는다
   { readonly available: true; readonly module: any } | { readonly available: false }
@@ -72,11 +87,35 @@ export class LocalNotifier {
       })
 
       if (Platform.OS === 'android') {
-        await loaded.module.setNotificationChannelAsync('messages', {
-          name: '메시지',
+        /**
+         * 메시지 통로를 셋으로 나눈다.
+         *
+         * **안드로이드는 통로를 한 번 만들면 소리와 진동을 못 바꾼다.**
+         * 앱이 고쳐도 무시한다. 사용자가 직접 설정에서 바꾸는 것만
+         * 먹힌다. 그래서 소리·진동·무음을 미리 따로 만들어두고
+         * 띄울 때 골라 쓴다.
+         */
+        await loaded.module.setNotificationChannelAsync('messages-sound', {
+          name: '메시지 (소리)',
           importance: loaded.module.AndroidImportance?.HIGH ?? 4,
           vibrationPattern: [0, 80, 120, 80],
           enableVibrate: true,
+        })
+
+        await loaded.module.setNotificationChannelAsync('messages-vibrate', {
+          name: '메시지 (진동)',
+          importance: loaded.module.AndroidImportance?.HIGH ?? 4,
+          vibrationPattern: [0, 80, 120, 80],
+          enableVibrate: true,
+          sound: null,
+        })
+
+        await loaded.module.setNotificationChannelAsync('messages-silent', {
+          name: '메시지 (무음)',
+          // 낮게 두면 소리도 진동도 없이 목록에만 쌓인다
+          importance: loaded.module.AndroidImportance?.LOW ?? 2,
+          enableVibrate: false,
+          sound: null,
         })
 
         /**
@@ -115,15 +154,26 @@ export class LocalNotifier {
    * `null` 로 예약하면 **곧바로** 뜬다. 시간을 재는 것이 아니라
    * 이미 받은 것을 알리는 것이라 기다릴 이유가 없다.
    */
-  async show(
-    title: string,
-    body: string,
-    channel: 'messages' | 'link' = 'messages',
-  ): Promise<void> {
+  /**
+   * 지금 띄운다.
+   *
+   * `null` 로 예약하면 **곧바로** 뜬다. 시간을 재는 것이 아니라
+   * 이미 받은 것을 알리는 것이라 기다릴 이유가 없다.
+   *
+   * ## 아이폰은 진동만 따로 못 한다
+   *
+   * iOS 는 "소리 없이 진동만" 을 앱이 정할 수 없다. 소리를 끄면
+   * 진동도 기기 설정을 따른다. 그래서 **진동과 무음이 아이폰에서는
+   * 둘 다 "소리 없음" 으로 같아진다.** 안드로이드에서는 다르다.
+   */
+  async show(title: string, body: string, how: NotifyHow = {}): Promise<void> {
     if (!this.allowed || body.length === 0) return
 
     const loaded = load()
     if (!loaded.available) return
+
+    const alertMode = how.alertMode ?? 'vibrate'
+    const withSound = how.kind === 'link' || alertMode === 'sound'
 
     try {
       await loaded.module.scheduleNotificationAsync({
@@ -132,8 +182,10 @@ export class LocalNotifier {
           body,
           // 연결이 끊긴 것은 소리까지 내서 알린다. 주머니에 있으면
           // 진동만으로는 놓친다.
-          sound: channel === 'link',
-          ...(Platform.OS === 'android' ? { channelId: channel } : {}),
+          sound: withSound,
+          ...(Platform.OS === 'android'
+            ? { channelId: channelFor(how.kind ?? 'message', alertMode) }
+            : {}),
         },
         trigger: null,
       })

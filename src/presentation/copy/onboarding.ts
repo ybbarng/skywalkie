@@ -76,6 +76,27 @@ export const roleReason = {
   guest: '아이폰이라 들어가는 쪽을 맡아요',
 } as const
 
+/**
+ * 새 말이 왔을 때 어떻게 알릴까.
+ *
+ * **기본은 진동이다.** 비행기는 시끄러워서 소리는 잘 안 들리고,
+ * 상대는 이어폰을 꽂고 있어서 오히려 놀란다. 옆자리 승객도 있다.
+ */
+export const alertModeChoice = {
+  vibrate: {
+    label: '진동',
+    detail: '주머니에 넣어둬도 알 수 있어요. 옆자리에는 안 들려요.',
+  },
+  sound: {
+    label: '소리',
+    detail: '소리까지 나요. 비행기가 시끄러우면 이게 나을 수 있어요.',
+  },
+  silent: {
+    label: '무음',
+    detail: '아무 소리도 진동도 없어요. 알림 목록에만 쌓입니다.',
+  },
+} as const
+
 export const audioModeChoice = {
   'push-to-talk-brief': {
     label: '말할 때만 잠깐',

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { AppState } from 'react-native'
-import { notifier } from '@/composition/services'
+import { notifier, type Preferences, vibration } from '@/composition/services'
 import type { Message } from '@/domain/message/Message'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { notificationBody, worthNotifying } from '../copy/notify'
@@ -20,6 +20,8 @@ export interface MessageNotificationsInput {
   readonly me: PeerId | null
   readonly peerName: string
   readonly messages: readonly Message[]
+  /** 소리로 알릴까 진동으로 알릴까 아무것도 안 할까 */
+  readonly alertMode: Preferences['alertMode']
 }
 
 export function useMessageNotifications(input: MessageNotificationsInput): void {
@@ -52,12 +54,25 @@ export function useMessageNotifications(input: MessageNotificationsInput): void 
       // 내가 쓴 것은 안 띄운다
       if (message.isMine(input.me)) continue
       if (!worthNotifying(message.content)) continue
-      // 보고 있으면 화면에 이미 떴다
-      if (active) continue
 
-      void notifier.show(input.peerName, notificationBody(message.content))
+      /**
+       * 보고 있으면 알림 대신 짧게 떤다.
+       *
+       * 화면에는 이미 떴으니 잠금 화면 알림은 시끄럽기만 하다.
+       * 그래도 **다른 곳을 보고 있었을 수 있어서** 손끝으로는 알린다.
+       * 무음을 고른 사람에게는 아무것도 안 한다.
+       */
+      if (active) {
+        if (input.alertMode !== 'silent') void vibration.tap()
+        continue
+      }
+
+      void notifier.show(input.peerName, notificationBody(message.content), {
+        kind: 'message',
+        alertMode: input.alertMode,
+      })
     }
-  }, [input.enabled, input.me, input.peerName, input.messages])
+  }, [input.enabled, input.me, input.peerName, input.messages, input.alertMode])
 
   // 앱을 열면 쌓인 알림을 치운다. 이미 다 본 것이다.
   useEffect(() => {
