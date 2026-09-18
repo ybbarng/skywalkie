@@ -28,5 +28,8 @@ export const makePeerId = makePeerIdImpl
 
 export const settings = settingsImpl
 
+/** 이만큼 지나도 상대를 못 찾으면 코드 입력을 권한다 */
+export { OFFER_MANUAL_AFTER_MS } from '@/infrastructure/transport/wifi/DiscoveryPlan'
+
 export type { KnownPeer, Preferences, Profile }
 export { defaultPreferences }

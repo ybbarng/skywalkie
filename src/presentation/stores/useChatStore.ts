@@ -9,8 +9,9 @@ import type { ConversationRepository } from '@/application/ports/ConversationRep
 import type { Envelope } from '@/application/ports/Envelope'
 import { PROTOCOL_VERSION } from '@/application/ports/Envelope'
 import type { MessageTransport } from '@/application/ports/MessageTransport'
+import type { DiscoveryProgress } from '@/application/ports/PeerDiscovery'
 import { SerialQueue } from '@/application/shared/SerialQueue'
-import { ids } from '@/composition/services'
+import { ids, OFFER_MANUAL_AFTER_MS } from '@/composition/services'
 import type { ConnectionState } from '@/domain/connection/ConnectionState'
 import type { Conversation } from '@/domain/message/Conversation'
 import type { Message } from '@/domain/message/Message'
@@ -42,6 +43,10 @@ interface ChatState {
   peerId: string | null
   /** 코드가 안 맞는 상대가 붙었다 */
   codeMismatch: boolean
+  /** 찾는 중에 무엇을 하고 있나. 화면에 보여준다 */
+  discovery: DiscoveryProgress | null
+  /** 오래 못 찾았다. 코드 입력을 권할 때가 됐다 */
+  searchingTooLong: boolean
 
   start(deps: ChatDeps): Promise<void>
   send(text: string): Promise<void>
@@ -77,6 +82,7 @@ export const useChatStore = create<ChatState>((set, get) => {
   let unsubscribes: Array<() => void> = []
   let typingTimer: ReturnType<typeof setTimeout> | null = null
   let lastTypingSentAt = 0
+  let searchTimer: ReturnType<typeof setTimeout> | null = null
 
   /** 화면에 보이는 목록을 저장소에서 다시 읽는다 */
   async function refresh(): Promise<void> {
@@ -218,6 +224,8 @@ export const useChatStore = create<ChatState>((set, get) => {
     pendingCount: 0,
     peerId: null,
     codeMismatch: false,
+    discovery: null,
+    searchingTooLong: false,
 
     async start(next) {
       deps = next
@@ -229,6 +237,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         }),
         next.transport.onStateChange(state => {
           set({ connection: state })
+          if (state.isUsable()) set({ searchingTooLong: false, discovery: null })
           if (!state.isUsable()) return
 
           // 연결이 돌아왔다. 인사하고 쌓인 것을 내보낸다.
@@ -255,6 +264,25 @@ export const useChatStore = create<ChatState>((set, get) => {
           void queue.run(refresh)
         }),
       ]
+
+      // 찾는 동안 무엇을 하는 중인지 받아 화면에 보여준다.
+      // 빙글빙글 도는 표시만 두면 사용자는 앱이 멈춘 줄 안다.
+      const watchable = next.transport as {
+        onProgress?: (handler: (progress: DiscoveryProgress) => void) => () => void
+      }
+      if (typeof watchable.onProgress === 'function') {
+        unsubscribes.push(
+          watchable.onProgress(progress => {
+            set({ discovery: progress })
+          }),
+        )
+      }
+
+      // 오래 못 찾으면 코드 입력을 권한다
+      if (searchTimer !== null) clearTimeout(searchTimer)
+      searchTimer = setTimeout(() => {
+        if (!get().connection?.isUsable()) set({ searchingTooLong: true })
+      }, OFFER_MANUAL_AFTER_MS)
 
       await queue.run(refresh)
       set({ ready: true })
@@ -386,6 +414,8 @@ export const useChatStore = create<ChatState>((set, get) => {
       unsubscribes = []
       if (typingTimer !== null) clearTimeout(typingTimer)
       typingTimer = null
+      if (searchTimer !== null) clearTimeout(searchTimer)
+      searchTimer = null
       deps = null
       set({ ready: false, messages: [], conversation: null })
     },

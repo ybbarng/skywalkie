@@ -8,6 +8,7 @@ import type { Message } from '@/domain/message/Message'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { peerId } from '@/domain/peer/PeerId'
 import { Character } from '@/presentation/characters/Character'
+import { ConnectingView } from '@/presentation/components/ConnectingView'
 import { ConnectionBar } from '@/presentation/components/ConnectionBar'
 import { MessageBubble } from '@/presentation/components/chat/MessageBubble'
 import { MessageInput } from '@/presentation/components/chat/MessageInput'
@@ -44,6 +45,8 @@ export default function Chat() {
   const markVisibleAsRead = useChatStore(s => s.markVisibleAsRead)
   const sendTyping = useChatStore(s => s.sendTyping)
   const sendNudgeToPeer = useChatStore(s => s.sendNudge)
+  const discovery = useChatStore(s => s.discovery)
+  const searchingTooLong = useChatStore(s => s.searchingTooLong)
 
   const me = useMe(profile?.peerId)
   const listRef = useRef<FlatList<Message>>(null)
@@ -159,7 +162,25 @@ export default function Chat() {
           }}
           onEndReachedThreshold={0.2}
           ListHeaderComponent={<LoadMore onPress={() => void loadOlder()} />}
-          ListEmptyComponent={<EmptyState />}
+          ListEmptyComponent={
+            connection?.isUsable() === true ? (
+              <EmptyState />
+            ) : (
+              <ConnectingView
+                state={connection}
+                progress={discovery}
+                showManualHint={searchingTooLong}
+                peerCharacter={peer?.character ?? 'aria'}
+                onRetry={() => {
+                  const container = currentContainer()
+                  const transport = container?.transport as {
+                    reconnectNow?: () => Promise<unknown>
+                  }
+                  void transport?.reconnectNow?.()
+                }}
+              />
+            )
+          }
           ListFooterComponent={peerTyping ? <TypingIndicator /> : null}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
         />
