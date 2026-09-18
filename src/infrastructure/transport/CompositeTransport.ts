@@ -236,6 +236,28 @@ export class CompositeTransport implements MessageTransport {
   pendingCount(): number {
     return this.outbox.length
   }
+
+  /**
+   * 지금 당장 다시 붙는다.
+   *
+   * 앱이 앞으로 돌아왔거나 사용자가 "다시 연결하기"를 눌렀을 때 쓴다.
+   * 기다리는 간격을 건너뛴다.
+   */
+  async reconnectNow(): Promise<Result<void, DomainError>> {
+    if (this.state.isUsable()) return ok(undefined)
+
+    for (const candidate of this.candidates) {
+      const retryable = candidate as {
+        retryNow?: () => Promise<Result<void, DomainError>>
+      }
+      if (typeof retryable.retryNow === 'function') {
+        const result = await retryable.retryNow()
+        if (result.ok) return result
+      }
+    }
+
+    return this.connect()
+  }
 }
 
 export type SwitchOutcome =

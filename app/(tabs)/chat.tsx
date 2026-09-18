@@ -3,7 +3,7 @@ import { router } from 'expo-router'
 import { useCallback, useEffect, useRef } from 'react'
 import { FlatList, KeyboardAvoidingView, Platform, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { createContainer } from '@/composition/container'
+import { createContainer, currentContainer } from '@/composition/container'
 import type { Message } from '@/domain/message/Message'
 import type { PeerId } from '@/domain/peer/PeerId'
 import { peerId } from '@/domain/peer/PeerId'
@@ -13,6 +13,7 @@ import { MessageBubble } from '@/presentation/components/chat/MessageBubble'
 import { MessageInput } from '@/presentation/components/chat/MessageInput'
 import { TypingIndicator } from '@/presentation/components/chat/TypingIndicator'
 import { Text } from '@/presentation/components/Text'
+import { useReconnectOnForeground } from '@/presentation/hooks/useReconnectOnForeground'
 import { useChatStore } from '@/presentation/stores/useChatStore'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
 import { useTheme } from '@/presentation/theme/ThemeProvider'
@@ -84,6 +85,18 @@ export default function Chat() {
       stop()
     }
   }, [profile, me, start, stop, rememberPeer])
+
+  // 앱이 앞으로 돌아오면 바로 다시 붙는다.
+  // 아이폰은 앱을 닫으면 몇 초 안에 소켓이 끊긴다.
+  useReconnectOnForeground(() => {
+    const container = currentContainer()
+    if (container === null) return
+
+    const transport = container.transport as {
+      reconnectNow?: () => Promise<unknown>
+    }
+    void transport.reconnectNow?.()
+  })
 
   // 화면에 보이는 동안 읽음으로 친다
   useEffect(() => {
