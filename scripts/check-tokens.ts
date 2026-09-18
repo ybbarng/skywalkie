@@ -19,6 +19,10 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const exemptPaths = [
   join('src', 'presentation', 'theme'),
   join('src', 'presentation', 'characters', 'palettes.ts'),
+  // 앱 화면이 아니라 **밖에서 열리는 HTML** 을 만드는 곳이다.
+  // 브라우저는 `useTheme()` 을 모르니 CSS 에 실제 색을 적어야 한다.
+  // 여기 값은 테마 토큰과 같게 맞춰 둔다.
+  join('src', 'application', 'archive', 'renderHtml.ts'),
 ]
 
 const searchRoots = [join(projectRoot, 'src'), join(projectRoot, 'app')]

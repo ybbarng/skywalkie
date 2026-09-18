@@ -223,6 +223,12 @@ export class SqliteConversationRepository implements ConversationRepository {
       )
       if (!rows.ok || rows.value.length === 0) return
 
+      // 여기서 조용히 멈춘다. 이 자리에서는 실패를 알릴 길이 없다.
+      //
+      // 그대로 두면 **꺼내다 만 대화가 스스로는 앞뒤가 맞는 파일로**
+      // 나온다. 그래서 내보내기가 시작할 때 센 수를 파일에 같이 적고,
+      // 되돌릴 때 견줘서 걸러낸다.
+      // (ArchiveFormat.ts 의 `sourceCount`)
       const mapped = mapRows(rows.value)
       if (!mapped.ok) return
 
