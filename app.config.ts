@@ -121,6 +121,9 @@ const config: ExpoConfig = {
         modes: ['central', 'peripheral'],
       },
     ],
+    // **맨 뒤여야 한다.** `expo-notifications` 가 붙여둔 원격 푸시 권한을
+    // 떼는 일이라, 붙인 다음에 와야 지워진다.
+    './plugins/withoutPushEntitlement',
   ],
 
   experiments: {
