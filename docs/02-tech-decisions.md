@@ -108,7 +108,13 @@ WebRTC를 쓸 때 보통 필요한 외부 서버는 두 가지다.
 
 ### 정한 것
 
-Expo SDK 57 / React Native 0.86 위에 TypeScript로 만든다.
+Expo SDK 56 / React Native 0.85 위에 TypeScript로 만든다.
+
+**57 이 아니라 56 인 이유가 있다.** 57 은 아이폰 빌드에 Xcode 26.4 이상을
+요구하고, 그건 macOS Tahoe 26.2 이상을 요구한다. 이 맥은 Sequoia 라
+macOS 부터 올려야 한다. 비행 날짜가 정해져 있는데 시스템을 흔들 이유가
+없다. 자세한 사정은 [08-build-release.md](./08-build-release.md) 1.1 에 있다.
+
 `expo prebuild`로 네이티브 프로젝트를 만들어 쓴다. **Expo Go 앱으로는 못 돌린다.**
 
 ### 왜
@@ -225,8 +231,8 @@ Jest 대신 Vitest를 쓰는 이유는 빠르고 설정이 단순해서다. Reac
 
 | 용도 | 라이브러리 | 버전 |
 |---|---|---|
-| 앱 뼈대 | expo | 57.x |
-| 앱 뼈대 | react-native | 0.86.x (SDK 57이 정한 값) |
+| 앱 뼈대 | expo | **56.x** (57 은 macOS 를 올려야 한다) |
+| 앱 뼈대 | react-native | 0.85.x (SDK 56 이 정한 값) |
 | 앱 뼈대 | react | 19.2.x |
 | 타입 | typescript | 6.0.x |
 | 화면 이동 | expo-router | SDK 동봉 |
