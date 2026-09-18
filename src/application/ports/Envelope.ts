@@ -87,11 +87,18 @@ export interface SyncResponsePayload {
 }
 
 export interface CallSignalPayload {
-  readonly kind: 'offer' | 'answer' | 'candidate' | 'hangup'
+  readonly kind: 'offer' | 'answer' | 'candidate' | 'hangup' | 'decline'
   readonly sdp?: string
   readonly candidate?: string
   readonly sdpMid?: string
   readonly sdpMLineIndex?: number
+  /**
+   * 소리만인가 영상까지인가. `offer` 에만 붙는다.
+   *
+   * 없으면 소리로 본다. 예전 버전이 보낸 봉투일 수 있는데,
+   * 거기서 멈추면 통화가 아예 안 된다.
+   */
+  readonly media?: 'voice' | 'video'
 }
 
 export interface ByePayload {

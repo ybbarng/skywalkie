@@ -39,7 +39,11 @@ export class FakeMessageTransport implements MessageTransport {
     return ok(undefined)
   }
 
+  /** 몇 번이나 끊겼나. 통화가 메시지 길을 건드리는지 보는 데 쓴다 */
+  disconnectCount = 0
+
   async disconnect(): Promise<void> {
+    this.disconnectCount += 1
     const stopped = this.state.stop()
     if (stopped.ok) this.setState(stopped.value)
   }

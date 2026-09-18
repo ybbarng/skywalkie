@@ -124,11 +124,12 @@ export const envelopeSchema = z.discriminatedUnion('t', [
     ...header,
     t: z.literal('call_signal'),
     p: z.object({
-      kind: z.enum(['offer', 'answer', 'candidate', 'hangup']),
+      kind: z.enum(['offer', 'answer', 'candidate', 'hangup', 'decline']),
       sdp: z.string().max(100_000).optional(),
       candidate: z.string().max(2000).optional(),
       sdpMid: z.string().max(100).optional(),
       sdpMLineIndex: z.number().int().min(0).optional(),
+      media: z.enum(['voice', 'video']).optional(),
     }),
   }),
   z.object({

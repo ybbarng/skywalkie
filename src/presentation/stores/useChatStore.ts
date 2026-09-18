@@ -6,7 +6,7 @@ import { MarkAsRead } from '@/application/messaging/MarkAsRead'
 import { ReceiveMessage } from '@/application/messaging/ReceiveMessage'
 import { SendMessage } from '@/application/messaging/SendMessage'
 import type { ConversationRepository } from '@/application/ports/ConversationRepository'
-import type { Envelope } from '@/application/ports/Envelope'
+import type { CallSignalPayload, Envelope } from '@/application/ports/Envelope'
 import { PROTOCOL_VERSION } from '@/application/ports/Envelope'
 import type { MessageTransport } from '@/application/ports/MessageTransport'
 import type { DiscoveryProgress } from '@/application/ports/PeerDiscovery'
@@ -81,6 +81,13 @@ export interface ChatDeps {
     displayName: string
     character: CharacterId
   }): void
+  /**
+   * 통화 봉투가 오면 넘긴다.
+   *
+   * 여기서 통화를 다루지 않는 이유는 **섞이면 안 되기 때문이다.**
+   * 통화 쪽이 터져도 글은 그대로 오가야 한다.
+   */
+  onCallSignal?(payload: CallSignalPayload): Promise<void>
 }
 
 export const useChatStore = create<ChatState>((set, get) => {
@@ -189,6 +196,17 @@ export const useChatStore = create<ChatState>((set, get) => {
       if (outcome.ok) {
         set({ conversation: outcome.value.conversation })
         if (outcome.value.restored > 0) await refresh()
+      }
+      return
+    }
+
+    if (envelope.t === 'call_signal') {
+      // **통화 쪽으로 넘기고 여기서는 손을 뗀다.**
+      // 통화에서 무슨 일이 나든 메시지 쪽이 흔들리면 안 된다.
+      try {
+        await deps.onCallSignal?.(envelope.p)
+      } catch {
+        // 통화 쪽이 터졌다. 글은 그대로 오간다.
       }
       return
     }

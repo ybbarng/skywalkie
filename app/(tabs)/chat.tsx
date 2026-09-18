@@ -1,7 +1,14 @@
 import Constants from 'expo-constants'
 import { router } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AppState, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native'
+import {
+  AppState,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  View,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { createContainer, currentContainer } from '@/composition/container'
 import type { Message } from '@/domain/message/Message'
@@ -10,13 +17,16 @@ import { peerId } from '@/domain/peer/PeerId'
 import { Character } from '@/presentation/characters/Character'
 import { ConnectingView } from '@/presentation/components/ConnectingView'
 import { ConnectionBar } from '@/presentation/components/ConnectionBar'
+import { CallOverlay } from '@/presentation/components/call/CallOverlay'
 import { MessageBubble } from '@/presentation/components/chat/MessageBubble'
 import { MessageInput } from '@/presentation/components/chat/MessageInput'
 import { TypingIndicator } from '@/presentation/components/chat/TypingIndicator'
+import { Icon } from '@/presentation/components/Icon'
 import { Text } from '@/presentation/components/Text'
 import { useNetworkWatch } from '@/presentation/hooks/useNetworkWatch'
 import { useReconnectOnForeground } from '@/presentation/hooks/useReconnectOnForeground'
 import { decidePhase, onOurNetwork } from '@/presentation/stores/connectPhase'
+import { useCallStore } from '@/presentation/stores/useCallStore'
 import { useChatStore } from '@/presentation/stores/useChatStore'
 import { useSetupStore } from '@/presentation/stores/useSetupStore'
 import { useTheme } from '@/presentation/theme/ThemeProvider'
@@ -55,6 +65,9 @@ export default function Chat() {
   const me = useMe(profile?.peerId)
   const listRef = useRef<FlatList<Message>>(null)
 
+  const call = useCallStore()
+  const preferences = useSetupStore(s => s.preferences)
+
   // 이어져 있는 동안은 지켜볼 필요가 없다. 핫스팟이 꺼지면 어차피 끊긴다.
   // 끊겼을 때만 보면서 **왜 끊겼는지**를 알아낸다.
   const connected = connection?.isUsable() ?? false
@@ -86,6 +99,16 @@ export default function Chat() {
         onPeerKnown: peer => {
           void rememberPeer(peer)
         },
+        // 통화 봉투는 통화 쪽으로 넘긴다
+        onCallSignal: payload => useCallStore.getState().handleSignal(payload),
+      })
+
+      // 통화를 쓸 수 있게 붙여둔다. 모듈이 없으면 available 이 false 다.
+      useCallStore.getState().attach({
+        transport: container.value.transport,
+        voice: container.value.voice,
+        audio: container.value.audio,
+        audioMode: preferences?.audioMode ?? 'push-to-talk-brief',
       })
 
       // 연결은 실패해도 화면은 뜬다. 쓴 메시지는 쌓였다가 나중에 나간다.
@@ -94,9 +117,10 @@ export default function Chat() {
 
     return () => {
       cancelled = true
+      useCallStore.getState().detach()
       stop()
     }
-  }, [profile, me, start, stop, rememberPeer])
+  }, [profile, me, start, stop, rememberPeer, preferences?.audioMode])
 
   // 앱이 앞으로 돌아오면 바로 다시 붙는다.
   // 아이폰은 앱을 닫으면 몇 초 안에 소켓이 끊긴다.
@@ -171,6 +195,9 @@ export default function Chat() {
         typing={peerTyping}
         connected={connected}
         name={peer?.displayName ?? '상대'}
+        canCall={call.available && connected}
+        onCall={() => void call.call('voice')}
+        onVideoCall={() => void call.call('video')}
       />
 
       <KeyboardAvoidingView
@@ -221,6 +248,26 @@ export default function Chat() {
           offline={!connected}
         />
       </KeyboardAvoidingView>
+
+      <CallOverlay
+        state={call.state}
+        peerName={peer?.displayName ?? '상대'}
+        peerCharacter={peer?.character ?? 'aria'}
+        talking={call.talking}
+        locked={call.locked}
+        muted={call.muted}
+        notice={call.notice}
+        onAccept={() => void call.accept()}
+        onDecline={() => void call.decline()}
+        onHangUp={() => void call.hangUp()}
+        onTalkStart={call.startTalking}
+        onTalkEnd={call.stopTalking}
+        onToggleLock={call.toggleLock}
+        onToggleMute={call.toggleMute}
+        onRetry={() => void call.call('voice')}
+        onDismissNotice={call.dismissNotice}
+        onClose={() => void call.hangUp()}
+      />
     </SafeAreaView>
   )
 }
@@ -303,11 +350,17 @@ function PeerHeader({
   typing,
   connected,
   name,
+  canCall,
+  onCall,
+  onVideoCall,
 }: {
   peerCharacter: Parameters<typeof Character>[0]['id']
   typing: boolean
   connected: boolean
   name: string
+  canCall: boolean
+  onCall: () => void
+  onVideoCall: () => void
 }) {
   const theme = useTheme()
 
@@ -326,12 +379,37 @@ function PeerHeader({
       }}
     >
       <Character id={peerCharacter} expression={expression} size={40} />
-      <View>
+      <View style={{ flex: 1 }}>
         <Text variant="bodyStrong">{name}</Text>
         <Text variant="caption" color="textMuted">
           {!connected ? '연결을 기다리는 중' : typing ? '입력 중...' : '연결됨'}
         </Text>
       </View>
+
+      {/*
+        통화 버튼은 **걸 수 있을 때만 보인다.**
+        눌러도 안 되는 버튼을 두면 "앱이 고장났나" 싶어진다.
+      */}
+      {canCall && (
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+          <Pressable
+            onPress={onCall}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="통화 걸기"
+          >
+            <Icon name="phone" size={22} />
+          </Pressable>
+          <Pressable
+            onPress={onVideoCall}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="영상 통화 걸기"
+          >
+            <Icon name="video" size={22} />
+          </Pressable>
+        </View>
+      )}
     </View>
   )
 }

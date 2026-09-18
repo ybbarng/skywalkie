@@ -17,6 +17,8 @@ export type IconName =
   | 'send'
   | 'mic'
   | 'micOff'
+  | 'phone'
+  | 'phoneOff'
   | 'video'
   | 'videoOff'
   | 'settings'
@@ -84,6 +86,23 @@ function renderPaths(name: IconName, p: PathProps) {
         <>
           <Path d="M21 3 10.5 13.5" {...p} />
           <Path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z" {...p} />
+        </>
+      )
+    case 'phone':
+      return (
+        <Path
+          d="M6.5 3h3l1.5 4-2 1.5a12 12 0 0 0 6.5 6.5L17 13l4 1.5v3a2 2 0 0 1-2.2 2A17 17 0 0 1 4.5 5.2 2 2 0 0 1 6.5 3Z"
+          {...p}
+        />
+      )
+    case 'phoneOff':
+      return (
+        <>
+          <Path
+            d="M10.7 5.6 9.5 3h-3a2 2 0 0 0-2 2.2 17 17 0 0 0 5 10.6M14 17.2a17 17 0 0 0 4.8 2.3A2 2 0 0 0 21 17.5v-3L17 13l-1.5 2"
+            {...p}
+          />
+          <Line x1={3} y1={3} x2={21} y2={21} {...p} />
         </>
       )
     case 'mic':

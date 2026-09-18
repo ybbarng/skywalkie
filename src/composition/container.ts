@@ -1,8 +1,11 @@
 import { openDatabaseAsync } from 'expo-sqlite'
 import type { ConversationRepository } from '@/application/ports/ConversationRepository'
 import type { MessageTransport } from '@/application/ports/MessageTransport'
+import type { AudioSession, VoiceLink } from '@/application/ports/VoiceLink'
 import type { DomainError } from '@/domain/shared/DomainError'
 import { err, ok, type Result } from '@/domain/shared/Result'
+import { DeviceAudioSession } from '@/infrastructure/call/DeviceAudioSession'
+import { WebRtcVoiceLink } from '@/infrastructure/call/WebRtcVoiceLink'
 import { ExpoSqlDatabase } from '@/infrastructure/persistence/ExpoSqlDatabase'
 import { migrate } from '@/infrastructure/persistence/migrations'
 import { SqliteConversationRepository } from '@/infrastructure/persistence/SqliteConversationRepository'
@@ -21,6 +24,15 @@ import { WifiLink } from '@/infrastructure/transport/wifi/WifiLink'
 export interface Container {
   readonly repository: ConversationRepository
   readonly transport: MessageTransport
+  /**
+   * 통화 길.
+   *
+   * **없을 수도 있다는 전제로 쓴다.** 통화 모듈이 안 들어갔거나
+   * 빌드가 어긋나도 여기서 앱이 죽으면 안 된다. `isAvailable()` 이
+   * false 를 답할 뿐이고 메시지는 그대로 오간다.
+   */
+  readonly voice: VoiceLink
+  readonly audio: AudioSession
   dispose(): Promise<void>
 }
 
@@ -58,10 +70,19 @@ export async function createContainer(
     }),
   ])
 
+  // 만들어만 둔다. 실제 모듈은 통화를 걸 때 비로소 불러온다.
+  // 여기서 불러오면 통화 모듈이 깨졌을 때 앱이 아예 안 켜진다.
+  const voice = new WebRtcVoiceLink()
+  const audio = new DeviceAudioSession()
+
   const container: Container = {
     repository,
     transport,
+    voice,
+    audio,
     async dispose() {
+      await voice.close()
+      await audio.deactivate()
       await transport.disconnect()
       await db.close()
       current = null
