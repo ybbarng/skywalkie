@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { Pressable, ScrollView, View } from 'react-native'
+import { Pressable, ScrollView, Switch, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { Preferences } from '@/composition/services'
 import { selectableCharacters } from '@/domain/peer/Character'
@@ -174,18 +174,19 @@ function AudioSection() {
 /**
  * 새 말이 왔을 때 어떻게 알릴까.
  *
- * **앱을 안 보고 있을 때만 쓰는 설정이다.** 보고 있으면 화면에 이미
- * 떠 있어서 잠금 화면 알림은 안 띄우고 짧게 떨기만 한다.
+ * **보고 있을 때와 안 보고 있을 때를 따로 정한다.** 서로 다른 일이라
+ * 하나로 묶으면 한쪽을 끄려다 다른 쪽까지 꺼진다.
  */
 function AlertSection() {
   const theme = useTheme()
   const preferences = useSetupStore(s => s.preferences)
   const chooseAlertMode = useSetupStore(s => s.chooseAlertMode)
+  const setTapWhileWatching = useSetupStore(s => s.setTapWhileWatching)
 
   const modes = Object.keys(alertModeChoice) as Array<Preferences['alertMode']>
 
   return (
-    <Section title="새 말이 오면">
+    <Section title="앱을 안 보고 있을 때">
       <View style={{ gap: theme.spacing.sm }}>
         {modes.map(mode => {
           const choice = alertModeChoice[mode]
@@ -217,6 +218,38 @@ function AlertSection() {
       <Text variant="caption" color="textMuted" style={{ marginTop: theme.spacing.sm }}>
         연결이 끊겼다는 알림은 이 설정과 상관없이 울려요. 그걸 놓치면 말이 아예 안 갑니다.
       </Text>
+
+      {/*
+        보고 있을 때는 잠금 화면 알림을 안 띄운다. 화면에 이미 떠 있다.
+        대신 짧게 떠는데, **거슬리면 끌 수 있어야 한다.**
+      */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: theme.spacing.md,
+          marginTop: theme.spacing.lg,
+          paddingTop: theme.spacing.lg,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.border,
+        }}
+      >
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text variant="bodyStrong">보고 있을 때도 짧게 떨기</Text>
+          <Text variant="caption" color="textMuted">
+            설정 화면이나 통화 화면에 있으면 새 말이 온 줄 모를 수 있어요. 거슬리면
+            꺼두세요.
+          </Text>
+        </View>
+
+        <Switch
+          value={preferences.tapWhileWatching}
+          onValueChange={on => void setTapWhileWatching(on)}
+          trackColor={{ false: theme.colors.border, true: theme.colors.me }}
+          thumbColor={theme.colors.surface}
+          accessibilityLabel="보고 있을 때도 짧게 떨기"
+        />
+      </View>
     </Section>
   )
 }

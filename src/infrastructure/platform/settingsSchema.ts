@@ -46,8 +46,14 @@ export const preferencesSchema = z.object({
   onboardingDone: z.boolean(),
   /** 아이폰 앱을 설치한 날. 만료 3일 전에 알리는 데 쓴다 */
   installedAt: z.number().int().optional(),
-  /** 새 말이 왔을 때 어떻게 알릴까 */
+  /** 앱을 **안 보고 있을 때** 새 말이 오면 어떻게 알릴까 */
   alertMode: z.enum(['sound', 'vibrate', 'silent']).default('vibrate'),
+  /**
+   * 앱을 **보고 있을 때** 새 말이 오면 짧게 떨까.
+   *
+   * 화면에 이미 떴는데 또 떨면 거슬릴 수 있다. 끌 수 있어야 한다.
+   */
+  tapWhileWatching: z.boolean().default(true),
 })
 
 export type Profile = z.infer<typeof profileSchema>
@@ -62,4 +68,6 @@ export const defaultPreferences: Preferences = {
   onboardingDone: false,
   // 비행기는 시끄럽고 상대는 이어폰을 꽂고 있다. 소리보다 진동이 맞다.
   alertMode: 'vibrate',
+  // 설정 화면이나 통화 화면에 있으면 새 말이 온 줄 모른다
+  tapWhileWatching: true,
 }

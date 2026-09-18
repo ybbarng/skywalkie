@@ -34,7 +34,22 @@ describe('예전 설정 읽기', () => {
   })
 
   it('새로 생긴 값은 기본값으로 채운다', () => {
-    expect(preferencesSchema.parse(older).alertMode).toBe('vibrate')
+    const parsed = preferencesSchema.parse(older)
+
+    expect(parsed.alertMode).toBe('vibrate')
+    expect(parsed.tapWhileWatching).toBe(true)
+  })
+
+  it('보고 있을 때 떠는 것과 안 보고 있을 때 알리는 것은 따로 정한다', () => {
+    // 하나로 묶으면 한쪽을 끄려다 다른 쪽까지 꺼진다.
+    const parsed = preferencesSchema.parse({
+      ...older,
+      alertMode: 'silent',
+      tapWhileWatching: true,
+    })
+
+    expect(parsed.alertMode).toBe('silent')
+    expect(parsed.tapWhileWatching).toBe(true)
   })
 
   it('기본은 진동이다', () => {

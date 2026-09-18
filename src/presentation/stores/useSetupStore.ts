@@ -40,6 +40,8 @@ interface SetupState {
   chooseAudioMode(audioMode: Preferences['audioMode']): Promise<void>
   /** 새 말이 왔을 때 소리로 알릴까 진동으로 알릴까 */
   chooseAlertMode(alertMode: Preferences['alertMode']): Promise<void>
+  /** 앱을 보고 있을 때도 짧게 떨까 */
+  setTapWhileWatching(on: boolean): Promise<void>
   finishOnboarding(): Promise<void>
   restartOnboarding(): Promise<void>
   rememberPeer(peer: KnownPeer): Promise<void>
@@ -125,6 +127,10 @@ export const useSetupStore = create<SetupState>((set, get) => ({
 
   async chooseAlertMode(alertMode) {
     await persistPreferences(set, { ...get().preferences, alertMode })
+  },
+
+  async setTapWhileWatching(on) {
+    await persistPreferences(set, { ...get().preferences, tapWhileWatching: on })
   },
 
   async finishOnboarding() {

@@ -14,10 +14,7 @@ import {
   makePeerId as makePeerIdImpl,
   ulidGenerator,
 } from '@/infrastructure/platform/UlidGenerator'
-import {
-  LocalHttpServer,
-  type LocalHttpServerHandlers,
-} from '@/infrastructure/transport/web/LocalHttpServer'
+import type { LocalHttpServerHandlers } from '@/infrastructure/transport/web/LocalHttpServer'
 
 /**
  * 화면이 쓰는 것들을 여기서 한 번 거친다.
@@ -87,13 +84,30 @@ export interface WebChatHandle {
 export async function startWebChat(
   handlers: LocalHttpServerHandlers,
 ): Promise<WebChatHandle | null> {
-  const server = new LocalHttpServer(handlers)
-  const started = await server.start()
-  if (!started.ok) return null
+  /**
+   * 쓸 때 들여온다.
+   *
+   * `LocalHttpServer` 는 `react-native-tcp-socket` 을 맨 위에서 들여온다.
+   * 이 파일은 거의 모든 화면이 들고 있어서, 여기서 같이 들여오면
+   * **소켓 모듈이 어긋났을 때 앱이 통째로 안 켜진다.** 웹 채팅은
+   * 덤이라 그것 때문에 글도 못 쓰게 되면 안 된다.
+   */
+  try {
+    // 상대 경로로 적는다. `@/` 별칭이 `require()` 에서도 풀리는지는
+    // 묶는 도구에 달렸는데, 여기서 못 풀면 웹 채팅이 통째로 죽는다.
+    const { LocalHttpServer } = require('../infrastructure/transport/web/LocalHttpServer')
+    const server = new LocalHttpServer(handlers)
 
-  return {
-    stop: () => server.stop(),
-    notify: () => server.notify(),
+    const started = await server.start()
+    if (!started.ok) return null
+
+    return {
+      stop: () => server.stop(),
+      notify: () => server.notify(),
+    }
+  } catch {
+    // 못 띄웠다. 앱으로 대화하는 것은 그대로 된다.
+    return null
   }
 }
 

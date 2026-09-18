@@ -49,6 +49,24 @@ presentation ──▶ application ──▶ domain
 
 `pnpm check:deps`가 검사한다. 이 검사를 우회하는 코드를 쓰지 않는다.
 
+### 네이티브 모듈을 맨 위에서 들여오지 않는다
+
+`expo-*`, `react-native-*` 는 **빌드가 어긋나면 들여오는 순간 터진다.** 그게 앱을 켜자마자 도는 파일이면 앱이 통째로 안 켜진다. **글도 못 쓴다.**
+
+```ts
+// ❌ 맨 위에서
+import * as Haptics from 'expo-haptics'
+
+// ✅ 쓸 때, 감싸서
+try {
+  const haptics = require('expo-haptics')
+} catch {
+  // 없으면 없는 대로
+}
+```
+
+`pnpm check:native`가 `composition/services.ts`에서 출발해 닿는 파일을 전부 본다. 덤 하나가 없어서 대화 자체를 못 하게 되는 것이 이 앱에서 가장 나쁜 일이다.
+
 ### 저장이 먼저, 전송이 나중
 
 `SendMessage`는 반드시 이 순서다.
@@ -144,6 +162,7 @@ pnpm test:watch
 pnpm typecheck
 pnpm lint
 pnpm check:deps      # 층 규칙
+pnpm check:native    # 켜자마자 도는 길에 네이티브 모듈
 
 pnpm start           # 개발
 pnpm dev:android
