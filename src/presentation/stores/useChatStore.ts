@@ -152,6 +152,8 @@ export interface ChatDeps {
 export const useChatStore = create<ChatState>((set, get) => {
   const queue = new SerialQueue()
   let deps: ChatDeps | null = null
+  /** 다 들었다는 신호를 끊는 것. 다음 재생 때 갈아 끼운다 */
+  let stopListening: (() => void) | null = null
   let unsubscribes: Array<() => void> = []
   let typingTimer: ReturnType<typeof setTimeout> | null = null
   let receiver: ReceiveAsset | null = null
@@ -751,6 +753,17 @@ export const useChatStore = create<ChatState>((set, get) => {
       // 아직 다 안 왔다. 조각이 도착하면 그때 들을 수 있다.
       if (path === undefined) return
 
+      /**
+       * 다 들으면 표시를 지운다.
+       *
+       * **이게 있어야 다음 것이 이어진다.** 안 지우면 "지금 나오는
+       * 중" 으로 남아서 저절로 들려주기가 한 번에 멎는다.
+       */
+      stopListening?.()
+      stopListening = active.voicePlayer.onFinished(() => {
+        set({ playingVoice: null })
+      })
+
       const played = await active.voicePlayer.play(path)
       set({ playingVoice: played.ok ? assetId : null })
     },
@@ -758,6 +771,9 @@ export const useChatStore = create<ChatState>((set, get) => {
     async stopVoice() {
       const active = deps
       if (active === null) return
+
+      stopListening?.()
+      stopListening = null
 
       await active.voicePlayer.stop()
       set({ playingVoice: null })

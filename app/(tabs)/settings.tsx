@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { Pressable, ScrollView, Switch, View } from 'react-native'
+import { Platform, Pressable, ScrollView, Switch, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { Preferences } from '@/composition/services'
 import { selectableCharacters } from '@/domain/peer/Character'
@@ -30,6 +30,7 @@ export default function Settings() {
         <ConnectionSection />
         <AppearanceSection />
         <AlertSection />
+        <VoiceSection />
         <AudioSection />
         <ConversationSection />
         <AboutSection />
@@ -251,6 +252,86 @@ function AlertSection() {
         />
       </View>
     </Section>
+  )
+}
+
+/**
+ * 음성 메시지와 연결 붙들기.
+ *
+ * **자동 재생이 켜지면 사실상 무전기가 된다.** 상대가 말하면 바로
+ * 들리고 나는 마이크를 꾹 눌러 답한다.
+ */
+function VoiceSection() {
+  const theme = useTheme()
+  const preferences = useSetupStore(s => s.preferences)
+  const setAutoPlayVoice = useSetupStore(s => s.setAutoPlayVoice)
+  const setKeepAwakeWhileAway = useSetupStore(s => s.setKeepAwakeWhileAway)
+
+  return (
+    <Section title="음성 메시지">
+      <Toggle
+        label="오면 바로 들려주기"
+        hint="대화 화면을 보고 있을 때만 틀어요. 켠 뒤에 온 것부터, 한 번 튼 건 다시 안 틀어요."
+        value={preferences.autoPlayVoice}
+        onChange={on => void setAutoPlayVoice(on)}
+      />
+
+      {/*
+        아이폰만 쓰는 설정이다. 안드로이드는 전경 서비스로 늘 붙들고
+        있어서 여기서 또 할 일이 없다.
+      */}
+      {Platform.OS === 'ios' && (
+        <View
+          style={{
+            marginTop: theme.spacing.lg,
+            paddingTop: theme.spacing.lg,
+            borderTopWidth: 1,
+            borderTopColor: theme.colors.border,
+          }}
+        >
+          <Toggle
+            label="뒤로 가도 연결 붙들기"
+            hint="아이폰은 앱이 뒤로 가면 잠들어 연결이 끊겨요. 들리지 않는 소리를 흘려 붙들 수 있는데, 배터리를 먹습니다. 연결이 자꾸 끊길 때만 켜세요."
+            value={preferences.keepAwakeWhileAway}
+            onChange={on => void setKeepAwakeWhileAway(on)}
+          />
+        </View>
+      )}
+    </Section>
+  )
+}
+
+/** 켜고 끄는 한 줄 */
+function Toggle({
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  label: string
+  hint: string
+  value: boolean
+  onChange(next: boolean): void
+}) {
+  const theme = useTheme()
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variant="bodyStrong">{label}</Text>
+        <Text variant="caption" color="textMuted">
+          {hint}
+        </Text>
+      </View>
+
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        trackColor={{ false: theme.colors.border, true: theme.colors.me }}
+        thumbColor={theme.colors.surface}
+        accessibilityLabel={label}
+      />
+    </View>
   )
 }
 

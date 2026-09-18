@@ -42,6 +42,10 @@ interface SetupState {
   chooseAlertMode(alertMode: Preferences['alertMode']): Promise<void>
   /** 앱을 보고 있을 때도 짧게 떨까 */
   setTapWhileWatching(on: boolean): Promise<void>
+  /** 보고 있을 때 음성 메시지를 저절로 틀까 */
+  setAutoPlayVoice(on: boolean): Promise<void>
+  /** 뒤로 가도 연결을 붙들까. 아이폰에만 쓰인다 */
+  setKeepAwakeWhileAway(on: boolean): Promise<void>
   finishOnboarding(): Promise<void>
   restartOnboarding(): Promise<void>
   rememberPeer(peer: KnownPeer): Promise<void>
@@ -131,6 +135,14 @@ export const useSetupStore = create<SetupState>((set, get) => ({
 
   async setTapWhileWatching(on) {
     await persistPreferences(set, { ...get().preferences, tapWhileWatching: on })
+  },
+
+  async setAutoPlayVoice(on) {
+    await persistPreferences(set, { ...get().preferences, autoPlayVoice: on })
+  },
+
+  async setKeepAwakeWhileAway(on) {
+    await persistPreferences(set, { ...get().preferences, keepAwakeWhileAway: on })
   },
 
   async finishOnboarding() {

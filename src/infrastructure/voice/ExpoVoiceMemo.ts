@@ -170,9 +170,17 @@ export class ExpoVoicePlayer implements VoicePlayer {
   // biome-ignore lint/suspicious/noExplicitAny: 네이티브 객체다
   private player: any = null
   private path: string | null = null
+  private readonly listeners = new Set<() => void>()
+  // biome-ignore lint/suspicious/noExplicitAny: 네이티브 구독이다
+  private subscription: any = null
 
   playingPath(): string | null {
     return this.path
+  }
+
+  onFinished(handler: () => void): () => void {
+    this.listeners.add(handler)
+    return () => this.listeners.delete(handler)
   }
 
   async play(path: string): Promise<Result<void, DomainError>> {
@@ -192,6 +200,23 @@ export class ExpoVoicePlayer implements VoicePlayer {
       })
 
       const player = audio.module.createAudioPlayer({ uri: path })
+
+      /**
+       * 다 들으면 알린다.
+       *
+       * `didJustFinish` 가 한 번 뜨는 것이 끝난 신호다. 이걸 놓치면
+       * **다음 음성이 안 이어져서** 저절로 들려주기가 한 번에 멎는다.
+       */
+      this.subscription = player.addListener?.(
+        'playbackStatusUpdate',
+        (status: { didJustFinish?: boolean }) => {
+          if (status?.didJustFinish !== true) return
+
+          this.path = null
+          for (const listener of this.listeners) listener()
+        },
+      )
+
       player.play()
 
       this.player = player
@@ -209,6 +234,14 @@ export class ExpoVoicePlayer implements VoicePlayer {
     const player = this.player
     this.player = null
     this.path = null
+
+    try {
+      this.subscription?.remove?.()
+    } catch {
+      // 이미 없어졌다
+    }
+    this.subscription = null
+
     if (player === null) return
 
     try {

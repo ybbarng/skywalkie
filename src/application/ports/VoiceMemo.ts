@@ -41,6 +41,14 @@ export interface VoicePlayer {
    */
   play(path: string): Promise<Result<void, DomainError>>
 
+  /**
+   * 다 들었을 때 알려준다.
+   *
+   * **이게 있어야 다음 것이 이어진다.** 없으면 하나 듣고 멈춰 서서,
+   * 저절로 들려주기가 한 번밖에 안 된다.
+   */
+  onFinished(handler: () => void): () => void
+
   stop(): Promise<void>
 
   /** 지금 무엇을 듣고 있나. 아무것도 아니면 null */

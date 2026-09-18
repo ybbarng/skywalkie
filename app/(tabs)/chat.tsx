@@ -29,11 +29,13 @@ import { myBatteryNote, peerBatteryNote } from '@/presentation/copy/battery'
 import { useAwayReminder } from '@/presentation/hooks/useAwayReminder'
 import { useBatteryWatch } from '@/presentation/hooks/useBatteryWatch'
 import { useKeepAwake } from '@/presentation/hooks/useKeepAwake'
+import { useKeepLinkAwake } from '@/presentation/hooks/useKeepLinkAwake'
 import { useLinkNotifications } from '@/presentation/hooks/useLinkNotifications'
 import { useMessageNotifications } from '@/presentation/hooks/useMessageNotifications'
 import { useNetworkWatch } from '@/presentation/hooks/useNetworkWatch'
 import { useReconnectOnForeground } from '@/presentation/hooks/useReconnectOnForeground'
 import { useStayAlive } from '@/presentation/hooks/useStayAlive'
+import { useVoiceAutoplay } from '@/presentation/hooks/useVoiceAutoplay'
 import { useWebFallback } from '@/presentation/hooks/useWebFallback'
 import { decidePhase, onOurNetwork } from '@/presentation/stores/connectPhase'
 import { useCallStore } from '@/presentation/stores/useCallStore'
@@ -213,6 +215,23 @@ export default function Chat() {
   // 멎어서 상대가 15초 뒤 끊겼다고 본다. 전경 서비스 안에서 헤드리스
   // 작업을 띄워두면 타이머가 살아 있다. 아이폰에는 이런 길이 없다.
   useStayAlive(ready)
+
+  // 아이폰은 전경 서비스가 없어서 들리지 않는 소리로 붙든다.
+  //
+  // **배터리를 먹어서 기본은 꺼둔다.** 연결이 자꾸 끊길 때만 켠다.
+  useKeepLinkAwake(ready && preferences.keepAwakeWhileAway)
+
+  // 음성 메시지가 오면 저절로 들려준다. **이게 무전기를 만든다.**
+  //
+  // 켠 뒤에 온 것만 튼다. 한 번 튼 것은 다시 안 튼다.
+  useVoiceAutoplay({
+    enabled: ready && preferences.autoPlayVoice,
+    me,
+    messages,
+    assetPaths,
+    playingVoice,
+    play: assetId => void playVoice(assetId),
+  })
 
   // 앱이 잠든 뒤에도 알리는 유일한 길.
   //

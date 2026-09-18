@@ -54,6 +54,21 @@ export const preferencesSchema = z.object({
    * 화면에 이미 떴는데 또 떨면 거슬릴 수 있다. 끌 수 있어야 한다.
    */
   tapWhileWatching: z.boolean().default(true),
+  /**
+   * 대화 화면을 보고 있을 때 음성 메시지를 저절로 틀까.
+   *
+   * 켜두면 사실상 무전기가 된다. 상대가 말하면 바로 들리고 나는
+   * 마이크를 꾹 눌러 답한다.
+   */
+  autoPlayVoice: z.boolean().default(true),
+  /**
+   * 뒤로 가도 연결을 붙들까. **아이폰에만 쓰인다.**
+   *
+   * 안드로이드는 전경 서비스로 늘 붙들고 있어서 이 값을 안 본다.
+   * 아이폰은 들리지 않는 소리를 계속 내야 해서 배터리를 먹는다.
+   * 그래서 기본은 꺼둔다.
+   */
+  keepAwakeWhileAway: z.boolean().default(false),
 })
 
 export type Profile = z.infer<typeof profileSchema>
@@ -70,4 +85,8 @@ export const defaultPreferences: Preferences = {
   alertMode: 'vibrate',
   // 설정 화면이나 통화 화면에 있으면 새 말이 온 줄 모른다
   tapWhileWatching: true,
+  // 무전기처럼 쓰는 것이 이 앱의 이름값이다
+  autoPlayVoice: true,
+  // 배터리를 먹는다. 연결이 자꾸 끊길 때만 켠다
+  keepAwakeWhileAway: false,
 }

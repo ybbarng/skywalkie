@@ -151,6 +151,40 @@ export const stayAlive = {
 }
 
 /**
+ * 아이폰이 앱을 안 재우게 붙든다.
+ *
+ * **들리지 않는 소리를 계속 흘린다.** `audio` 배경 모드를 가진 앱이
+ * 소리를 내고 있으면 iOS 가 안 재운다. 아이폰에는 이 길밖에 없다.
+ *
+ * 하나만 두고 계속 쓴다. 두 개가 각자 붙들면 하나를 놓아도 소리가
+ * 계속 난다. (src/infrastructure/voice/SilentKeepAlive.ts)
+ */
+export const keepLinkAwake = {
+  async start(): Promise<boolean> {
+    try {
+      const { SilentKeepAlive } = require('../infrastructure/voice/SilentKeepAlive')
+      holder ??= new SilentKeepAlive()
+
+      const started = await holder.start()
+      return started.ok
+    } catch {
+      return false
+    }
+  },
+
+  async stop(): Promise<void> {
+    try {
+      await holder?.stop()
+    } catch {
+      // 못 놓았다. 다음에 다시 해본다.
+    }
+  },
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: 쓸 때 들여오므로 타입을 여기서 못 쓴다
+let holder: any = null
+
+/**
  * 지금 배터리가 얼마나 남았나.
  *
  * **비행기에서 폰이 죽으면 대화가 끝난다.** 미리 알면 보조 배터리를
