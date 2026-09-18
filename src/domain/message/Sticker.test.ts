@@ -69,8 +69,27 @@ describe('자세 목록', () => {
     expect(stickerPoses).toContain('sleep')
   })
 
-  it('한 줄에 들어갈 만큼만 둔다', () => {
-    // 너무 많으면 고르는 데 시간이 걸린다. 글로 쓰는 게 빨라진다.
-    expect(stickerPoses.length).toBeLessThanOrEqual(12)
+  it('말 대신 쓸 감정이 들어 있다', () => {
+    // 세 시간 동안 말을 못 한다. **글보다 빠르고 오해가 적다.**
+    for (const feeling of ['angry', 'surprised', 'shy', 'sorry'] as const) {
+      expect(stickerPoses).toContain(feeling)
+    }
+  })
+
+  it('두어 번 밀어 다 볼 만큼만 둔다', () => {
+    // 두 줄로 놓고 옆으로 민다. 한 줄에 네댓 개가 보이니 두어 번
+    // 밀면 끝이다. 더 많으면 고르다 지쳐 글로 쓰는 게 빨라진다.
+    expect(stickerPoses.length).toBeLessThanOrEqual(32)
+  })
+
+  it('몸 상태를 알릴 수 있다', () => {
+    // 말을 못 하니 "배고파" 한마디도 글로 쳐야 한다.
+    for (const state of ['hungry', 'toilet', 'cold', 'hot', 'sleep'] as const) {
+      expect(stickerPoses).toContain(state)
+    }
+  })
+
+  it('같은 자세가 두 번 들어 있지 않다', () => {
+    expect(new Set(stickerPoses).size).toBe(stickerPoses.length)
   })
 })

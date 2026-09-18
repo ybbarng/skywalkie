@@ -232,15 +232,19 @@ function renderLinkbar(device: Device): string {
 function renderDrawer(device: Device): string {
   if (!ui.drawer[device.side]) return ''
 
-  const strip = stickerPoses
-    .map(pose =>
-      `<button data-pose="${pose}" data-side="${device.side}">`
-      + sticker(device.profile.character, pose, 62) + '</button>')
+  // **두 줄로 놓는다.** 열여섯이나 되어 한 줄이면 한참 밀어야 한다.
+  const half = Math.ceil(stickerPoses.length / 2)
+  const rows = [stickerPoses.slice(0, half), stickerPoses.slice(half)]
+    .map(row => '<div class="strip">' + row
+      .map(pose =>
+        `<button data-pose="${pose}" data-side="${device.side}">`
+        + sticker(device.profile.character, pose, 56) + '</button>')
+      .join('') + '</div>')
     .join('')
 
   return '<div class="drawer"><div class="head"><span>누르면 바로 보내져요</span>'
     + `<button data-closedrawer="${device.side}">닫기</button></div>`
-    + `<div class="strip">${strip}</div></div>`
+    + `<div class="strips">${rows}</div></div>`
 }
 
 function renderComposer(device: Device): string {

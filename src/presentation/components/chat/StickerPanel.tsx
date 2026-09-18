@@ -15,6 +15,12 @@ import { Text } from '../Text'
  * (docs/05-messaging-spec.md · T23)
  */
 
+/** 위아래 두 줄로 나눈다. 홀수면 윗줄이 하나 많다 */
+function rowsOf(poses: readonly StickerPose[]): StickerPose[][] {
+  const half = Math.ceil(poses.length / 2)
+  return [poses.slice(0, half), poses.slice(half)]
+}
+
 interface StickerPanelProps {
   character: CharacterId
   onPick: (pose: StickerPose) => void
@@ -52,28 +58,38 @@ export function StickerPanel({ character, onPick, onClose }: StickerPanelProps) 
         </Pressable>
       </View>
 
+      {/*
+        **두 줄로 놓는다.** 열여섯이나 되어 한 줄이면 끝까지 가는 데
+        한참 밀어야 한다. 두 줄이면 한 번 밀어 다 본다.
+      */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: theme.spacing.lg,
-          gap: theme.spacing.sm,
-        }}
+        contentContainerStyle={{ paddingHorizontal: theme.spacing.lg }}
       >
-        {stickerPoses.map(pose => (
-          <Pressable
-            key={pose}
-            onPress={() => onPick(pose)}
-            accessibilityRole="button"
-            style={{
-              borderRadius: theme.radius.lg,
-              backgroundColor: theme.colors.bg,
-              padding: theme.spacing.xs,
-            }}
-          >
-            <Sticker character={character} pose={pose} size={72} />
-          </Pressable>
-        ))}
+        <View style={{ gap: theme.spacing.sm }}>
+          {rowsOf(stickerPoses).map(row => (
+            <View
+              key={row.join()}
+              style={{ flexDirection: 'row', gap: theme.spacing.sm }}
+            >
+              {row.map(pose => (
+                <Pressable
+                  key={pose}
+                  onPress={() => onPick(pose)}
+                  accessibilityRole="button"
+                  style={{
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: theme.colors.bg,
+                    padding: theme.spacing.xs,
+                  }}
+                >
+                  <Sticker character={character} pose={pose} size={64} />
+                </Pressable>
+              ))}
+            </View>
+          ))}
+        </View>
       </ScrollView>
     </View>
   )

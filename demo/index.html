@@ -168,14 +168,6 @@ h1 { font-size: 19px; margin: 0; }
 .peerhead .name { font-weight: 700; font-size: 14px; }
 .peerhead .state { font-size: 11.5px; color: var(--muted); }
 
-/*
-  아이폰은 이름을 가운데 둔다. 안드로이드는 왼쪽에 붙인다.
-  두 운영체제가 제목을 다루는 방식이 이렇게 갈린다.
-*/
-[data-os="ios"] .peerhead { flex-direction: column; gap: 3px; padding: 4px 14px 9px; }
-[data-os="ios"] .peerhead .who { flex: none; text-align: center; }
-[data-os="ios"] .peerhead .name { font-size: 13px; font-weight: 600; }
-[data-os="ios"] .peerhead .state { font-size: 10.5px; }
 
 .log { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; }
 .log::-webkit-scrollbar { width: 0; }
@@ -188,23 +180,24 @@ h1 { font-size: 19px; margin: 0; }
 
 .row { display: flex; align-items: flex-end; gap: 6px; margin-top: 9px; }
 .row.mine { flex-direction: row-reverse; }
+/*
+  **앱이 그리는 것은 두 폰이 똑같다.**
+
+  말풍선도 머리도 입력줄도 React Native 한 벌이 그린다. 모서리를 몇
+  픽셀로 깎을지는 앱이 정하지 운영체제가 정하지 않는다. 여기서 OS 마다
+  다르게 그리면 실제로 안 그런 것을 그런 척하게 된다.
+
+  진짜로 갈리는 것은 **앱이 못 건드리는 것들**뿐이다. 위에 적어둔
+  모서리·구멍·아래 막대·상태바, 그리고 기본 글꼴.
+*/
 .bubble {
-  max-width: 74%; padding: 8px 13px;
+  max-width: 74%; padding: 8px 13px; border-radius: 20px;
   background: var(--peer); color: var(--peer-text);
   white-space: pre-wrap; word-break: break-word; font-size: 14px;
 }
-.row.mine .bubble { background: var(--me); color: var(--me-text); }
+.row.mine .bubble { background: var(--me); color: var(--me-text); border-bottom-right-radius: 6px; }
+.row:not(.mine) .bubble { border-bottom-left-radius: 6px; }
 .row .bubble.bare, .row.mine .bubble.bare { background: none; padding: 0; border-radius: 0; }
-
-/* 아이폰은 꼬리를 살짝 남기고 크게 둥글다 */
-[data-os="ios"] .bubble { border-radius: 19px; padding: 7px 14px; }
-[data-os="ios"] .row.mine .bubble { border-bottom-right-radius: 6px; }
-[data-os="ios"] .row:not(.mine) .bubble { border-bottom-left-radius: 6px; }
-
-/* 안드로이드는 네 귀 중 하나만 각지게 깎는다 */
-[data-os="android"] .bubble { border-radius: 18px; }
-[data-os="android"] .row.mine .bubble { border-top-right-radius: 5px; }
-[data-os="android"] .row:not(.mine) .bubble { border-top-left-radius: 5px; }
 
 .meta { font-size: 10px; color: var(--faint); display: flex; align-items: center; gap: 3px; white-space: nowrap; }
 .meta .wait, .meta .fail { font-size: 9.5px; }
@@ -229,23 +222,13 @@ h1 { font-size: 19px; margin: 0; }
 .composer .tool { background: none; border: 0; padding: 3px; cursor: pointer; color: var(--muted); display: grid; place-items: center; }
 .composer input {
   flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 8px 14px;
-  color: var(--text);
+  border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
 }
 .composer .send {
-  width: 33px; height: 33px; border: 0; cursor: pointer;
+  width: 33px; height: 33px; border-radius: 17px; border: 0; cursor: pointer;
   background: var(--me); color: var(--me-text); display: grid; place-items: center; flex: none;
 }
-
-/* 아이폰: 테두리만 있는 알약. 안드로이드: 속이 찬 칸 */
-[data-os="ios"] .composer input {
-  border-radius: 999px; border: 1px solid var(--border); background: transparent;
-}
-[data-os="ios"] .composer .send { border-radius: 17px; }
-
-[data-os="android"] .composer input {
-  border-radius: 24px; border: 0; background: var(--surface);
-}
-[data-os="android"] .composer .send { border-radius: 11px; }
 
 .connecting {
   flex: 1; display: flex; flex-direction: column; align-items: center;
@@ -256,11 +239,9 @@ h1 { font-size: 19px; margin: 0; }
 .connecting p { font-size: 13px; color: var(--muted); margin: 0; white-space: pre-line; }
 .connecting .action {
   margin-top: 4px; font: inherit; font-size: 13px; font-weight: 600;
-  padding: 10px 20px; border: 0; cursor: pointer;
+  padding: 10px 20px; border-radius: 999px; border: 0; cursor: pointer;
   background: var(--me); color: var(--me-text);
 }
-[data-os="ios"] .connecting .action { border-radius: 13px; }
-[data-os="android"] .connecting .action { border-radius: 999px; }
 
 /*
   글꼴도 갈린다.
@@ -283,8 +264,9 @@ h1 { font-size: 19px; margin: 0; }
 .drawer { border-top: 1px solid var(--border); background: var(--surface); padding: 9px 0; flex: none; }
 .drawer .head { display: flex; justify-content: space-between; padding: 0 14px 5px; font-size: 11.5px; color: var(--muted); }
 .drawer .head button { background: none; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 11.5px; }
-.drawer .strip { display: flex; gap: 7px; overflow-x: auto; padding: 0 14px; }
-.drawer .strip::-webkit-scrollbar { height: 0; }
+.drawer .strips { overflow-x: auto; padding: 0 14px; display: flex; flex-direction: column; gap: 6px; }
+.drawer .strips::-webkit-scrollbar { height: 0; }
+.drawer .strip { display: flex; gap: 6px; }
 .drawer .strip button { background: var(--bg); border: 0; border-radius: 13px; padding: 3px; cursor: pointer; flex: none; }
 
 .netlog {

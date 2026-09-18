@@ -4,6 +4,16 @@ import type { StickerPose } from '@/domain/message/MessageContent'
 import type { CharacterId } from '@/domain/peer/Character'
 import { useTheme } from '../theme/ThemeProvider'
 import { paletteFor, stickerColor } from './palettes'
+import {
+  armsInFront,
+  type BrowShape,
+  type EyeShape,
+  type HandsShape,
+  limbsFor,
+  lookFor,
+  type MouthShape,
+  type PoseExtra,
+} from './poses'
 
 /**
  * 캐릭터 이모티콘.
@@ -13,6 +23,8 @@ import { paletteFor, stickerColor } from './palettes'
  *
  * 얼굴 얼개는 `Character` 와 같은 자리를 쓴다. 그래야 같은 사람으로
  * 보인다. 자세마다 다른 것은 표정과 손, 그리고 주변에 뜨는 것뿐이다.
+ *
+ * 무엇을 그릴지 **정하는 일은 `poses.ts` 가** 한다. 여기서는 선만 긋는다.
  * (docs/05-messaging-spec.md · T23)
  */
 
@@ -27,14 +39,18 @@ export function Sticker({ character, pose, size = 120 }: StickerProps) {
   const palette = paletteFor(character, theme.mode)
   const tear = stickerColor('tear', theme.mode)
   const heart = stickerColor('heart', theme.mode)
+  const look = lookFor(pose)
 
   return (
     <View accessibilityLabel={describePose(pose)}>
       <Svg width={size} height={size} viewBox="0 0 120 120">
-        <G rotation={tiltFor(pose)} origin="60, 70">
+        <G rotation={look.tiltDegrees} origin="60, 70">
           {/* 몸 */}
           <Path d="M28 120c0-15 15-25 32-25s32 10 32 25z" fill={palette.clothing} />
           <Rect x={53} y={80} width={14} height={14} fill={palette.skinShade} />
+
+          {/* 몸 옆으로 뻗는 팔은 얼굴 뒤에 */}
+          {!armsInFront(look.hands) && <Arms hands={look.hands} palette={palette} />}
 
           {/* 얼굴 */}
           <Ellipse cx={60} cy={58} rx={28} ry={30} fill={palette.skin} />
@@ -45,11 +61,26 @@ export function Sticker({ character, pose, size = 120 }: StickerProps) {
             fill={palette.hair}
           />
 
-          <PoseFace pose={pose} palette={palette} tear={tear} />
-          <PoseHands pose={pose} palette={palette} />
+          <Brows shape={look.brows} palette={palette} />
+          <Eyes shape={look.eyes} palette={palette} />
+          <Mouth shape={look.mouth} palette={palette} />
+
+          {look.blush && (
+            <G opacity={0.5}>
+              <Ellipse cx={40} cy={66} rx={5} ry={3} fill={palette.blush} />
+              <Ellipse cx={80} cy={66} rx={5} ry={3} fill={palette.blush} />
+            </G>
+          )}
+
+          {/*
+            손과, 가슴을 가로지르는 팔은 얼굴 위에 온다.
+            뒤에 그리면 얼굴에 가려 통째로 사라진다.
+          */}
+          {armsInFront(look.hands) && <Arms hands={look.hands} palette={palette} />}
+          <Hands hands={look.hands} palette={palette} />
         </G>
 
-        <PoseExtras pose={pose} palette={palette} heart={heart} />
+        <Extras extra={look.extra} palette={palette} heart={heart} tear={tear} />
       </Svg>
     </View>
   )
@@ -57,100 +88,218 @@ export function Sticker({ character, pose, size = 120 }: StickerProps) {
 
 type Palette = ReturnType<typeof paletteFor>
 
-function PoseFace({
-  pose,
-  palette,
-  tear,
-}: {
-  pose: StickerPose
-  palette: Palette
-  tear: string
-}) {
-  // 자세마다 눈과 입이 다르다. 여기가 이모티콘의 대부분이다.
-  const closedEyes = pose === 'sleep' || pose === 'laugh' || pose === 'cry'
+/* ── 얼굴 ─────────────────────────────────────────── */
 
-  return (
-    <G>
-      {closedEyes ? (
+function Eyes({ shape, palette }: { shape: EyeShape; palette: Palette }) {
+  // 감은 눈은 선 하나로 그린다. 납작한 타원은 어색해 보인다.
+  const shut = (d: string) => (
+    <Path
+      d={d}
+      stroke={palette.line}
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      fill="none"
+    />
+  )
+
+  switch (shape) {
+    case 'closedUp':
+      return (
         <G>
-          {/* 웃을 때는 위로, 울 때와 잘 때는 아래로 휜다 */}
-          <Path
-            d={pose === 'laugh' ? 'M44 58q5-5 10 0' : 'M44 56q5 5 10 0'}
-            stroke={palette.line}
-            strokeWidth={2.4}
-            strokeLinecap="round"
-            fill="none"
-          />
-          <Path
-            d={pose === 'laugh' ? 'M66 58q5-5 10 0' : 'M66 56q5 5 10 0'}
-            stroke={palette.line}
-            strokeWidth={2.4}
-            strokeLinecap="round"
-            fill="none"
-          />
+          {shut('M44 58q5-5 10 0')}
+          {shut('M66 58q5-5 10 0')}
         </G>
-      ) : (
+      )
+
+    case 'closedDown':
+      return (
+        <G>
+          {shut('M44 56q5 5 10 0')}
+          {shut('M66 56q5 5 10 0')}
+        </G>
+      )
+
+    case 'winkRight':
+      return (
+        <G>
+          <Ellipse cx={49} cy={57} rx={4} ry={5} fill={palette.line} />
+          <Circle cx={50.5} cy={55} r={1.4} fill={palette.skin} />
+          {shut('M66 58q5-5 10 0')}
+        </G>
+      )
+
+    case 'squint':
+      return (
+        <G>
+          <Ellipse cx={49} cy={57} rx={4} ry={2.2} fill={palette.line} />
+          <Ellipse cx={71} cy={57} rx={4} ry={2.2} fill={palette.line} />
+        </G>
+      )
+
+    case 'wide':
+      return (
+        <G>
+          <Ellipse cx={49} cy={57} rx={5.5} ry={7} fill={palette.skin} />
+          <Ellipse cx={71} cy={57} rx={5.5} ry={7} fill={palette.skin} />
+          <Ellipse
+            cx={49}
+            cy={57}
+            rx={5.5}
+            ry={7}
+            fill="none"
+            stroke={palette.line}
+            strokeWidth={1.6}
+          />
+          <Ellipse
+            cx={71}
+            cy={57}
+            rx={5.5}
+            ry={7}
+            fill="none"
+            stroke={palette.line}
+            strokeWidth={1.6}
+          />
+          <Circle cx={49} cy={58} r={3} fill={palette.line} />
+          <Circle cx={71} cy={58} r={3} fill={palette.line} />
+        </G>
+      )
+
+    case 'lookUp':
+      // 눈동자를 위로 올린다. 딴 데를 보는 것처럼 보인다.
+      return (
+        <G>
+          <Ellipse cx={49} cy={57} rx={4} ry={5} fill={palette.line} opacity={0.25} />
+          <Ellipse cx={71} cy={57} rx={4} ry={5} fill={palette.line} opacity={0.25} />
+          <Circle cx={50} cy={54} r={2.8} fill={palette.line} />
+          <Circle cx={72} cy={54} r={2.8} fill={palette.line} />
+        </G>
+      )
+
+    case 'open':
+      return (
         <G>
           <Ellipse cx={49} cy={57} rx={4} ry={5} fill={palette.line} />
           <Ellipse cx={71} cy={57} rx={4} ry={5} fill={palette.line} />
           <Circle cx={50.5} cy={55} r={1.4} fill={palette.skin} />
           <Circle cx={72.5} cy={55} r={1.4} fill={palette.skin} />
         </G>
-      )}
-
-      <PoseMouth pose={pose} palette={palette} />
-
-      {(pose === 'heart' || pose === 'laugh') && (
-        <G opacity={0.5}>
-          <Ellipse cx={40} cy={66} rx={5} ry={3} fill={palette.blush} />
-          <Ellipse cx={80} cy={66} rx={5} ry={3} fill={palette.blush} />
-        </G>
-      )}
-
-      {/* 눈물 */}
-      {pose === 'cry' && (
-        <G>
-          <Path
-            d="M47 62q-2 8 1 12"
-            stroke={tear}
-            strokeWidth={3}
-            fill="none"
-            strokeLinecap="round"
-          />
-          <Path
-            d="M73 62q2 8-1 12"
-            stroke={tear}
-            strokeWidth={3}
-            fill="none"
-            strokeLinecap="round"
-          />
-        </G>
-      )}
-    </G>
-  )
+      )
+  }
 }
 
-function PoseMouth({ pose, palette }: { pose: StickerPose; palette: Palette }) {
-  switch (pose) {
-    case 'laugh':
-      return <Ellipse cx={60} cy={72} rx={9} ry={7} fill={palette.mouth} />
-    case 'eat':
-      return <Ellipse cx={60} cy={72} rx={7} ry={6} fill={palette.mouth} />
-    case 'cry':
-      return <Ellipse cx={60} cy={73} rx={6} ry={5} fill={palette.mouth} />
-    case 'sleep':
-      return <Ellipse cx={60} cy={72} rx={3} ry={4} fill={palette.mouth} opacity={0.8} />
-    case 'bored':
+function Brows({ shape, palette }: { shape: BrowShape; palette: Palette }) {
+  if (shape === 'none') return null
+
+  const stroke = (d: string) => (
+    <Path
+      d={d}
+      stroke={palette.hairShade}
+      strokeWidth={2.6}
+      strokeLinecap="round"
+      fill="none"
+    />
+  )
+
+  switch (shape) {
+    case 'angry':
+      // 안쪽이 내려온다
+      return (
+        <G>
+          {stroke('M43 44l11 6')}
+          {stroke('M77 44l-11 6')}
+        </G>
+      )
+    case 'sad':
+      // 안쪽이 올라간다
+      return (
+        <G>
+          {stroke('M43 50l11-6')}
+          {stroke('M77 50l-11-6')}
+        </G>
+      )
+    case 'raised':
+      return (
+        <G>
+          {stroke('M43 43q6-3 11 0')}
+          {stroke('M66 43q6-3 11 0')}
+        </G>
+      )
+  }
+}
+
+function Mouth({ shape, palette }: { shape: MouthShape; palette: Palette }) {
+  switch (shape) {
+    case 'grin':
       return (
         <Path
-          d="M53 73q7 -3 14 0"
+          d="M51 70q9 8 18 0"
+          stroke={palette.mouth}
+          strokeWidth={2.6}
+          strokeLinecap="round"
+          fill="none"
+        />
+      )
+    case 'openBig':
+      return <Ellipse cx={60} cy={72} rx={9} ry={7} fill={palette.mouth} />
+    case 'openSmall':
+      return <Ellipse cx={60} cy={72} rx={6.5} ry={5.5} fill={palette.mouth} />
+    case 'flat':
+      return (
+        <Path
+          d="M53 72h14"
           stroke={palette.mouth}
           strokeWidth={2.4}
           strokeLinecap="round"
           fill="none"
         />
       )
-    default:
+    case 'frown':
+      return (
+        <Path
+          d="M53 74q7-5 14 0"
+          stroke={palette.mouth}
+          strokeWidth={2.4}
+          strokeLinecap="round"
+          fill="none"
+        />
+      )
+    case 'wavy':
+      // 덜덜 떠는 입
+      return (
+        <Path
+          d="M52 72q3.5-3 7 0t7 0"
+          stroke={palette.mouth}
+          strokeWidth={2.4}
+          strokeLinecap="round"
+          fill="none"
+        />
+      )
+    case 'tiny':
+      return (
+        <Ellipse cx={60} cy={72} rx={3} ry={3.5} fill={palette.mouth} opacity={0.85} />
+      )
+    case 'tongue':
+      // 입에서 혀가 아래로 나온다
+      return (
+        <G>
+          <Path
+            d="M51 70q9 7 18 0"
+            stroke={palette.mouth}
+            strokeWidth={2.6}
+            strokeLinecap="round"
+            fill="none"
+          />
+          <Path d="M53 73h14a7 7 0 0 1-14 0z" fill={palette.blush} />
+          <Path
+            d="M60 74v5"
+            stroke={palette.mouth}
+            strokeWidth={1.4}
+            strokeLinecap="round"
+            opacity={0.5}
+          />
+        </G>
+      )
+    case 'smile':
       return (
         <Path
           d="M53 71q7 5 14 0"
@@ -163,76 +312,141 @@ function PoseMouth({ pose, palette }: { pose: StickerPose; palette: Palette }) {
   }
 }
 
-function PoseHands({ pose, palette }: { pose: StickerPose; palette: Palette }) {
-  switch (pose) {
-    case 'wave':
-      // 한 손을 머리 옆으로 올린다
-      return (
-        <G>
-          <Circle cx={97} cy={52} r={9} fill={palette.skin} />
+/* ── 팔과 손 ──────────────────────────────────────── */
+
+/**
+ * 어깨에서 손까지. 옷 색으로 그려 소매처럼 보인다.
+ *
+ * **몸 앞으로 오는 팔에는 윤곽을 두른다.** 팔과 몸이 같은 옷 색이라
+ * 겹치는 자리에서 팔이 통째로 사라졌다. 가위표도 두 손 모으기도
+ * 그래서 안 보였다.
+ */
+function Arms({ hands, palette }: { hands: HandsShape; palette: Palette }) {
+  const limbs = limbsFor(hands)
+  if (limbs.length === 0) return null
+
+  const outlined = armsInFront(hands)
+
+  return (
+    <G>
+      {outlined &&
+        limbs.map(limb => (
           <Path
-            d="M92 60 86 78"
-            stroke={palette.clothing}
+            key={`edge-${limb.path}`}
+            d={limb.path}
+            stroke={palette.line}
+            strokeWidth={12}
+            strokeLinecap="round"
+            fill="none"
+            opacity={0.35}
+          />
+        ))}
+
+      {limbs.map(limb => (
+        <Path
+          key={limb.path}
+          d={limb.path}
+          stroke={palette.clothing}
+          strokeWidth={9}
+          strokeLinecap="round"
+          fill="none"
+        />
+      ))}
+    </G>
+  )
+}
+
+function Hands({ hands, palette }: { hands: HandsShape; palette: Palette }) {
+  const limbs = limbsFor(hands)
+  if (limbs.length === 0) return null
+
+  return (
+    <G>
+      {/*
+        손에는 **늘 테두리를 두른다.**
+
+        살색 손이 살색 얼굴이나 목 위에 오면 테두리가 없을 때 통째로
+        묻힌다. 턱을 괴거나 두 손을 모으는 자세가 그래서 안 보였다.
+      */}
+      {limbs.map(limb => (
+        <Circle
+          key={limb.path}
+          cx={limb.hand.x}
+          cy={limb.hand.y}
+          r={limb.hand.r}
+          fill={palette.skin}
+          stroke={palette.skinShade}
+          strokeWidth={1.8}
+        />
+      ))}
+
+      {/*
+        엄지.
+
+        주먹 옆으로 비스듬히 세운다. 곧게 위로 세우면 손가락으로
+        가리키는 것처럼 보인다.
+      */}
+      {hands === 'thumbsUp' && (
+        <G>
+          <Path
+            d="M89 73 86 64"
+            stroke={palette.skinShade}
             strokeWidth={9}
             strokeLinecap="round"
           />
-        </G>
-      )
-    case 'thumbsUp':
-      return (
-        <G>
-          <Circle cx={95} cy={78} r={10} fill={palette.skin} />
           <Path
-            d="M95 72v-9"
-            stroke={palette.skinShade}
+            d="M89 73 86 64"
+            stroke={palette.skin}
             strokeWidth={6}
             strokeLinecap="round"
           />
-        </G>
-      )
-    case 'eat':
-      // 젓가락
-      return (
-        <G>
-          <Circle cx={92} cy={82} r={9} fill={palette.skin} />
+          {/* 접힌 손가락 */}
           <Path
-            d="M88 78 74 68M92 79 78 70"
-            stroke={palette.accessory}
-            strokeWidth={2.4}
+            d="M88 79h10M89 84h8"
+            stroke={palette.skinShade}
+            strokeWidth={1.6}
             strokeLinecap="round"
           />
         </G>
-      )
-    case 'bored':
-      // 턱을 괸다
-      return (
-        <G>
-          <Circle cx={44} cy={82} r={9} fill={palette.skin} />
-          <Path
-            d="M40 90 34 104"
-            stroke={palette.clothing}
-            strokeWidth={9}
-            strokeLinecap="round"
-          />
-        </G>
-      )
-    default:
-      return null
-  }
+      )}
+
+      {/* 젓가락 */}
+      {hands === 'chopsticks' && (
+        <Path
+          d="M86 78 72 66M90 79 76 68"
+          stroke={palette.accessory}
+          strokeWidth={2.4}
+          strokeLinecap="round"
+        />
+      )}
+
+      {/* 부채 */}
+      {hands === 'fan' && (
+        <Path d="M86 72 76 58 96 58z" fill={palette.accessory} opacity={0.9} />
+      )}
+    </G>
+  )
 }
 
-/** 캐릭터 주변에 뜨는 것. 기울임 밖에 그려야 같이 안 돈다 */
-function PoseExtras({
-  pose,
+/* ── 몸 주위에 뜨는 것 ────────────────────────────── */
+
+/** 기울임 밖에 그려야 같이 안 돈다 */
+function Extras({
+  extra,
   palette,
   heart,
+  tear,
 }: {
-  pose: StickerPose
+  extra: PoseExtra
   palette: Palette
   heart: string
+  tear: string
 }) {
-  switch (pose) {
-    case 'heart':
+  switch (extra) {
+    case 'none':
+      return null
+
+    case 'hearts':
       return (
         <G>
           <Path
@@ -246,7 +460,8 @@ function PoseExtras({
           />
         </G>
       )
-    case 'sleep':
+
+    case 'zzz':
       return (
         <G opacity={0.8}>
           <Path
@@ -265,7 +480,8 @@ function PoseExtras({
           />
         </G>
       )
-    case 'laugh':
+
+    case 'laughLines':
       return (
         <G opacity={0.75}>
           <Path
@@ -277,7 +493,8 @@ function PoseExtras({
           />
         </G>
       )
-    case 'bored':
+
+    case 'dots':
       return (
         <G opacity={0.6}>
           <Circle cx={97} cy={30} r={2.5} fill={palette.line} />
@@ -285,24 +502,253 @@ function PoseExtras({
           <Circle cx={113} cy={30} r={2.5} fill={palette.line} />
         </G>
       )
-    default:
-      return null
-  }
-}
 
-/** 자세마다 몸을 조금씩 기울인다. 굳어 있지 않아 보인다 */
-function tiltFor(pose: StickerPose): number {
-  switch (pose) {
-    case 'wave':
-      return -6
-    case 'bored':
-      return 8
-    case 'sleep':
-      return 10
-    case 'laugh':
-      return -4
-    default:
-      return 0
+    case 'steam':
+      // 머리 양옆으로 김이 뿜어져 나온다
+      return (
+        <G opacity={0.8}>
+          <Path
+            d="M26 30q-6-4-3-11M34 22q-7-2-6-10"
+            stroke={palette.accessory}
+            strokeWidth={2.6}
+            fill="none"
+            strokeLinecap="round"
+          />
+          <Path
+            d="M94 30q6-4 3-11M86 22q7-2 6-10"
+            stroke={palette.accessory}
+            strokeWidth={2.6}
+            fill="none"
+            strokeLinecap="round"
+          />
+        </G>
+      )
+
+    case 'bang':
+      return (
+        <G>
+          <Path
+            d="M104 12v16"
+            stroke={palette.accessory}
+            strokeWidth={4.5}
+            strokeLinecap="round"
+          />
+          <Circle cx={104} cy={35} r={2.6} fill={palette.accessory} />
+        </G>
+      )
+
+    case 'sparkle':
+      return (
+        <G opacity={0.9}>
+          <Path
+            d="M100 18v12M94 24h12"
+            stroke={palette.accessory}
+            strokeWidth={2.4}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M18 40v8M14 44h8"
+            stroke={palette.accessory}
+            strokeWidth={2}
+            strokeLinecap="round"
+            opacity={0.7}
+          />
+        </G>
+      )
+
+    case 'thoughtDots':
+      // 작은 방울이 커지며 올라간다
+      return (
+        <G opacity={0.75}>
+          <Circle
+            cx={92}
+            cy={38}
+            r={3}
+            fill="none"
+            stroke={palette.line}
+            strokeWidth={1.8}
+          />
+          <Circle
+            cx={100}
+            cy={28}
+            r={4.5}
+            fill="none"
+            stroke={palette.line}
+            strokeWidth={1.8}
+          />
+          <Circle
+            cx={110}
+            cy={16}
+            r={6.5}
+            fill="none"
+            stroke={palette.line}
+            strokeWidth={1.8}
+          />
+        </G>
+      )
+
+    case 'snow':
+      return (
+        <G opacity={0.85}>
+          <Path
+            d="M18 22v12M13 25l10 6M23 25l-10 6"
+            stroke={tear}
+            strokeWidth={2}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M102 30v9M98.5 32l7 5M105.5 32l-7 5"
+            stroke={tear}
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            opacity={0.8}
+          />
+        </G>
+      )
+
+    case 'sweat':
+      return (
+        <Path
+          d="M96 34c0 0-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"
+          fill={tear}
+          opacity={0.85}
+        />
+      )
+
+    case 'tears':
+      return (
+        <G>
+          <Path
+            d="M47 62q-2 8 1 12"
+            stroke={tear}
+            strokeWidth={3}
+            fill="none"
+            strokeLinecap="round"
+          />
+          <Path
+            d="M73 62q2 8-1 12"
+            stroke={tear}
+            strokeWidth={3}
+            fill="none"
+            strokeLinecap="round"
+          />
+        </G>
+      )
+
+    case 'growl':
+      // 배 옆에서 나는 소리
+      return (
+        <G opacity={0.7}>
+          <Path
+            d="M12 100q4-4 8 0t8 0M12 108q4-4 8 0t8 0"
+            stroke={palette.accessory}
+            strokeWidth={2.2}
+            fill="none"
+            strokeLinecap="round"
+          />
+        </G>
+      )
+
+    case 'noiseLines':
+      // 양옆에서 들이치는 소리
+      return (
+        <G opacity={0.85}>
+          <Path
+            d="M16 44l7-7 0 6 7-7M16 58l7-7 0 6 7-7"
+            stroke={palette.accessory}
+            strokeWidth={2.2}
+            fill="none"
+            strokeLinecap="round"
+          />
+          <Path
+            d="M104 44l-7-7 0 6-7-7M104 58l-7-7 0 6-7-7"
+            stroke={palette.accessory}
+            strokeWidth={2.2}
+            fill="none"
+            strokeLinecap="round"
+          />
+        </G>
+      )
+
+    case 'shiver':
+      return (
+        <G opacity={0.75}>
+          <Path
+            d="M14 74h8M12 84h8M14 94h8"
+            stroke={palette.line}
+            strokeWidth={2.2}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M98 74h8M100 84h8M98 94h8"
+            stroke={palette.line}
+            strokeWidth={2.2}
+            strokeLinecap="round"
+          />
+        </G>
+      )
+
+    case 'ache':
+      // 결리는 어깨 위에 뜨는 표시
+      return (
+        <G opacity={0.85}>
+          <Path
+            d="M36 86l-6-6M36 86l-8 1M36 86l1-8"
+            stroke={palette.accessory}
+            strokeWidth={2.4}
+            strokeLinecap="round"
+          />
+        </G>
+      )
+
+    case 'sigh':
+      // 입에서 빠져나가는 숨
+      return (
+        <Path
+          d="M90 80q10-2 13-10"
+          stroke={palette.line}
+          strokeWidth={2.4}
+          fill="none"
+          strokeLinecap="round"
+          opacity={0.55}
+        />
+      )
+
+    case 'doorSign':
+      // 화장실 문. 손만 들면 인사와 구별이 안 된다
+      return (
+        <G>
+          <Rect
+            x={10}
+            y={20}
+            width={22}
+            height={32}
+            rx={3}
+            fill={palette.accessory}
+            opacity={0.9}
+          />
+          <Circle cx={27} cy={37} r={2} fill={palette.clothing} />
+          <Path
+            d="M16 27h10"
+            stroke={palette.clothing}
+            strokeWidth={2.2}
+            strokeLinecap="round"
+          />
+        </G>
+      )
+
+    case 'heatDrops':
+      // 이마와 목덜미로 흐르는 땀
+      return (
+        <G opacity={0.85}>
+          <Path d="M20 26c0 0-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z" fill={tear} />
+          <Path
+            d="M28 46c0 0-4 5-4 8a4 4 0 0 0 8 0c0-3-4-8-4-8z"
+            fill={tear}
+            opacity={0.75}
+          />
+        </G>
+      )
   }
 }
 
@@ -324,5 +770,47 @@ export function describePose(pose: StickerPose): string {
       return '먹는 이모티콘'
     case 'bored':
       return '심심해하는 이모티콘'
+    case 'angry':
+      return '화난 이모티콘'
+    case 'surprised':
+      return '놀란 이모티콘'
+    case 'shy':
+      return '부끄러워하는 이모티콘'
+    case 'wink':
+      return '윙크하는 이모티콘'
+    case 'think':
+      return '생각하는 이모티콘'
+    case 'no':
+      return '안 된다는 이모티콘'
+    case 'cold':
+      return '추워하는 이모티콘'
+    case 'sorry':
+      return '미안해하는 이모티콘'
+    case 'miss':
+      return '보고 싶어하는 이모티콘'
+    case 'excited':
+      return '신난 이모티콘'
+    case 'please':
+      return '부탁하는 이모티콘'
+    case 'clap':
+      return '박수 치는 이모티콘'
+    case 'stuffy':
+      return '답답해하는 이모티콘'
+    case 'loud':
+      return '시끄러워하는 이모티콘'
+    case 'scared':
+      return '무서워하는 이모티콘'
+    case 'stiff':
+      return '뻐근해하는 이모티콘'
+    case 'hot':
+      return '더워하는 이모티콘'
+    case 'toilet':
+      return '화장실 가고 싶다는 이모티콘'
+    case 'hungry':
+      return '배고픈 이모티콘'
+    case 'yummy':
+      return '맛있어하는 이모티콘'
+    case 'full':
+      return '배부른 이모티콘'
   }
 }

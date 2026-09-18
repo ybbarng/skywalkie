@@ -1,5 +1,14 @@
 import type { StickerPose } from '@/domain/message/MessageContent'
 import type { CharacterId } from '@/domain/peer/Character'
+import {
+  armsInFront,
+  type BrowShape,
+  type EyeShape,
+  limbsFor,
+  lookFor,
+  type MouthShape,
+  type PoseExtra,
+} from '@/presentation/characters/poses'
 
 /**
  * 캐릭터와 아이콘 그리기.
@@ -172,51 +181,195 @@ export function character(
     + '</svg>'
 }
 
+/**
+ * 이모티콘.
+ *
+ * **무엇을 그릴지는 앱과 같은 곳에서 가져온다.** `poses.ts` 는 순수
+ * TypeScript 라 브라우저에서도 돈다. 여기서는 그 규칙대로 선만 긋는다.
+ * 그래서 앱에 자세를 하나 더하면 데모에도 저절로 생긴다.
+ */
 export function sticker(id: CharacterId, pose: StickerPose, size: number): string {
   const p = PALETTES[id] ?? (PALETTES.aria as Palette)
+  const look = lookFor(pose)
+  const limbs = limbsFor(look.hands)
 
-  let eyes = `<ellipse cx="49" cy="57" rx="4" ry="5" fill="${p.line}"/><ellipse cx="71" cy="57" rx="4" ry="5" fill="${p.line}"/>`
-  let mouth = `<path d="M53 71q7 5 14 0" stroke="${p.mouth}" stroke-width="2.4" stroke-linecap="round" fill="none"/>`
-  let hands = ''
-  let extra = ''
+  // 몸 앞으로 오는 팔에는 윤곽을 두른다. 없으면 몸에 묻혀 사라진다
+  const outlined = armsInFront(look.hands)
+  const arms = (outlined
+    ? limbs
+      .map(limb =>
+        `<path d="${limb.path}" stroke="${p.line}" stroke-width="12" stroke-linecap="round" fill="none" opacity=".35"/>`)
+      .join('')
+    : '')
+    + limbs
+      .map(limb =>
+        `<path d="${limb.path}" stroke="${p.cloth}" stroke-width="9" stroke-linecap="round" fill="none"/>`)
+      .join('')
 
-  const shutEyes = `<path d="M44 56q5 5 10 0" stroke="${p.line}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
-    + `<path d="M66 56q5 5 10 0" stroke="${p.line}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
+  // **손에는 늘 테두리를 두른다.** 없으면 얼굴이나 목 위에서 묻힌다.
+  let hands = limbs
+    .map(limb =>
+      `<circle cx="${limb.hand.x}" cy="${limb.hand.y}" r="${limb.hand.r}" fill="${p.skin}" stroke="${p.shade}" stroke-width="1.8"/>`)
+    .join('')
 
-  if (pose === 'heart') {
-    extra = '<path d="M96 30c0-5 7-6 8-1 1-5 8-4 8 1 0 6-8 11-8 11s-8-5-8-11z" fill="#F87171"/>'
-  } else if (pose === 'laugh') {
-    eyes = `<path d="M44 58q5-5 10 0" stroke="${p.line}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
-      + `<path d="M66 58q5-5 10 0" stroke="${p.line}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
-    mouth = `<ellipse cx="60" cy="72" rx="9" ry="7" fill="${p.mouth}"/>`
-  } else if (pose === 'sleep') {
-    eyes = shutEyes
-    extra = `<path d="M92 24h9l-9 10h9" stroke="${p.line}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`
-  } else if (pose === 'cry') {
-    eyes = shutEyes
-    mouth = `<ellipse cx="60" cy="73" rx="6" ry="5" fill="${p.mouth}"/>`
-    extra = '<path d="M47 62q-2 8 1 12" stroke="#5CC8FF" stroke-width="3" fill="none" stroke-linecap="round"/>'
-      + '<path d="M73 62q2 8-1 12" stroke="#5CC8FF" stroke-width="3" fill="none" stroke-linecap="round"/>'
-  } else if (pose === 'wave') {
-    hands = `<circle cx="97" cy="52" r="9" fill="${p.skin}"/><path d="M92 60 86 78" stroke="${p.cloth}" stroke-width="9" stroke-linecap="round"/>`
-  } else if (pose === 'thumbsUp') {
-    hands = `<circle cx="95" cy="78" r="10" fill="${p.skin}"/><path d="M95 72v-9" stroke="${p.shade}" stroke-width="6" stroke-linecap="round"/>`
-  } else if (pose === 'eat') {
-    hands = `<circle cx="92" cy="82" r="9" fill="${p.skin}"/><path d="M88 78 74 68M92 79 78 70" stroke="${p.acc}" stroke-width="2.4" stroke-linecap="round"/>`
-    mouth = `<ellipse cx="60" cy="72" rx="7" ry="6" fill="${p.mouth}"/>`
-  } else if (pose === 'bored') {
-    mouth = `<path d="M53 73q7 -3 14 0" stroke="${p.mouth}" stroke-width="2.4" stroke-linecap="round" fill="none"/>`
-    hands = `<circle cx="44" cy="82" r="9" fill="${p.skin}"/><path d="M40 90 34 104" stroke="${p.cloth}" stroke-width="9" stroke-linecap="round"/>`
-    extra = `<g opacity=".6"><circle cx="97" cy="30" r="2.5" fill="${p.line}"/>`
-      + `<circle cx="105" cy="30" r="2.5" fill="${p.line}"/><circle cx="113" cy="30" r="2.5" fill="${p.line}"/></g>`
+  if (look.hands === 'thumbsUp') {
+    hands += `<path d="M89 73 86 64" stroke="${p.shade}" stroke-width="9" stroke-linecap="round"/>`
+      + `<path d="M89 73 86 64" stroke="${p.skin}" stroke-width="6" stroke-linecap="round"/>`
+      + `<path d="M88 79h10M89 84h8" stroke="${p.shade}" stroke-width="1.6" stroke-linecap="round"/>`
+  }
+  if (look.hands === 'chopsticks') {
+    hands += `<path d="M86 78 72 66M90 79 76 68" stroke="${p.acc}" stroke-width="2.4" stroke-linecap="round"/>`
+  }
+  if (look.hands === 'fan') {
+    hands += `<path d="M86 72 76 58 96 58z" fill="${p.acc}" opacity=".9"/>`
   }
 
-  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120">`
+  const blush = look.blush
+    ? `<g opacity=".5"><ellipse cx="40" cy="66" rx="5" ry="3" fill="${p.blush}"/>`
+      + `<ellipse cx="80" cy="66" rx="5" ry="3" fill="${p.blush}"/></g>`
+    : ''
+
+  const tilt = look.tiltDegrees === 0
+    ? ''
+    : ` transform="rotate(${look.tiltDegrees} 60 70)"`
+
+  // 가슴을 가로지르는 팔은 얼굴 앞에 와야 안 가려진다
+  const front = outlined
+
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120"><g${tilt}>`
     + `<path d="M28 120c0-15 15-25 32-25s32 10 32 25z" fill="${p.cloth}"/>`
     + `<rect x="53" y="80" width="14" height="14" fill="${p.shade}"/>`
+    + (front ? '' : arms)
     + `<ellipse cx="60" cy="58" rx="28" ry="30" fill="${p.skin}"/>`
     + `<path d="M32 56c0-18 12-29 28-29s28 11 28 29c-3-8-8-12-13-13-7 4-23 4-30 0-5 1-10 5-13 13z" fill="${p.hair}"/>`
-    + eyes + mouth + hands + extra + '</svg>'
+    + poseBrows(look.brows, p) + poseEyes(look.eyes, p) + poseMouth(look.mouth, p)
+    + blush + (front ? arms : '') + hands
+    + '</g>' + poseExtra(look.extra, p) + '</svg>'
+}
+
+function poseEyes(shape: EyeShape, p: Palette): string {
+  const shut = (d: string) =>
+    `<path d="${d}" stroke="${p.line}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
+
+  switch (shape) {
+    case 'closedUp':
+      return shut('M44 58q5-5 10 0') + shut('M66 58q5-5 10 0')
+    case 'closedDown':
+      return shut('M44 56q5 5 10 0') + shut('M66 56q5 5 10 0')
+    case 'winkRight':
+      return `<ellipse cx="49" cy="57" rx="4" ry="5" fill="${p.line}"/>`
+        + `<circle cx="50.5" cy="55" r="1.4" fill="${p.skin}"/>`
+        + shut('M66 58q5-5 10 0')
+    case 'squint':
+      return `<ellipse cx="49" cy="57" rx="4" ry="2.2" fill="${p.line}"/>`
+        + `<ellipse cx="71" cy="57" rx="4" ry="2.2" fill="${p.line}"/>`
+    case 'wide':
+      return `<ellipse cx="49" cy="57" rx="5.5" ry="7" fill="${p.skin}" stroke="${p.line}" stroke-width="1.6"/>`
+        + `<ellipse cx="71" cy="57" rx="5.5" ry="7" fill="${p.skin}" stroke="${p.line}" stroke-width="1.6"/>`
+        + `<circle cx="49" cy="58" r="3" fill="${p.line}"/><circle cx="71" cy="58" r="3" fill="${p.line}"/>`
+    case 'lookUp':
+      return `<ellipse cx="49" cy="57" rx="4" ry="5" fill="${p.line}" opacity=".25"/>`
+        + `<ellipse cx="71" cy="57" rx="4" ry="5" fill="${p.line}" opacity=".25"/>`
+        + `<circle cx="50" cy="54" r="2.8" fill="${p.line}"/><circle cx="72" cy="54" r="2.8" fill="${p.line}"/>`
+    case 'open':
+      return `<ellipse cx="49" cy="57" rx="4" ry="5" fill="${p.line}"/>`
+        + `<ellipse cx="71" cy="57" rx="4" ry="5" fill="${p.line}"/>`
+        + `<circle cx="50.5" cy="55" r="1.4" fill="${p.skin}"/>`
+        + `<circle cx="72.5" cy="55" r="1.4" fill="${p.skin}"/>`
+  }
+}
+
+function poseBrows(shape: BrowShape, p: Palette): string {
+  const line = (d: string) =>
+    `<path d="${d}" stroke="${p.hairDark}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`
+
+  switch (shape) {
+    case 'none': return ''
+    case 'angry': return line('M43 44l11 6') + line('M77 44l-11 6')
+    case 'sad': return line('M43 50l11-6') + line('M77 50l-11-6')
+    case 'raised': return line('M43 43q6-3 11 0') + line('M66 43q6-3 11 0')
+  }
+}
+
+function poseMouth(shape: MouthShape, p: Palette): string {
+  const line = (d: string, width = 2.4) =>
+    `<path d="${d}" stroke="${p.mouth}" stroke-width="${width}" fill="none" stroke-linecap="round"/>`
+
+  switch (shape) {
+    case 'grin': return line('M51 70q9 8 18 0', 2.6)
+    case 'openBig': return `<ellipse cx="60" cy="72" rx="9" ry="7" fill="${p.mouth}"/>`
+    case 'openSmall': return `<ellipse cx="60" cy="72" rx="6.5" ry="5.5" fill="${p.mouth}"/>`
+    case 'flat': return line('M53 72h14')
+    case 'frown': return line('M53 74q7-5 14 0')
+    case 'wavy': return line('M52 72q3.5-3 7 0t7 0')
+    case 'tiny': return `<ellipse cx="60" cy="72" rx="3" ry="3.5" fill="${p.mouth}" opacity=".85"/>`
+    case 'tongue': return line('M51 70q9 7 18 0', 2.6)
+      + `<path d="M53 73h14a7 7 0 0 1-14 0z" fill="${p.blush}"/>`
+      + `<path d="M60 74v5" stroke="${p.mouth}" stroke-width="1.4" stroke-linecap="round" opacity=".5"/>`
+    case 'smile': return line('M53 71q7 5 14 0')
+  }
+}
+
+function poseExtra(extra: PoseExtra, p: Palette): string {
+  const HEART = '#F87171'
+  const TEAR = '#5CC8FF'
+
+  switch (extra) {
+    case 'none': return ''
+    case 'hearts':
+      return `<path d="M96 30c0-5 7-6 8-1 1-5 8-4 8 1 0 6-8 11-8 11s-8-5-8-11z" fill="${HEART}"/>`
+        + `<path d="M14 46c0-4 5-4 6-1 1-3 6-3 6 1 0 4-6 8-6 8s-6-4-6-8z" fill="${HEART}" opacity=".7"/>`
+    case 'zzz':
+      return `<g opacity=".8"><path d="M92 24h9l-9 10h9" stroke="${p.line}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`
+        + `<path d="M105 10h7l-7 8h7" stroke="${p.line}" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>`
+    case 'laughLines':
+      return `<path d="M18 34q4-6 8 0M96 28q4-6 8 0" stroke="${p.acc}" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".75"/>`
+    case 'dots':
+      return `<g opacity=".6"><circle cx="97" cy="30" r="2.5" fill="${p.line}"/>`
+        + `<circle cx="105" cy="30" r="2.5" fill="${p.line}"/><circle cx="113" cy="30" r="2.5" fill="${p.line}"/></g>`
+    case 'steam':
+      return `<g opacity=".8" stroke="${p.acc}" stroke-width="2.6" fill="none" stroke-linecap="round">`
+        + '<path d="M26 30q-6-4-3-11M34 22q-7-2-6-10"/>'
+        + '<path d="M94 30q6-4 3-11M86 22q7-2 6-10"/></g>'
+    case 'bang':
+      return `<path d="M104 12v16" stroke="${p.acc}" stroke-width="4.5" stroke-linecap="round"/>`
+        + `<circle cx="104" cy="35" r="2.6" fill="${p.acc}"/>`
+    case 'sparkle':
+      return `<path d="M100 18v12M94 24h12" stroke="${p.acc}" stroke-width="2.4" stroke-linecap="round"/>`
+        + `<path d="M18 40v8M14 44h8" stroke="${p.acc}" stroke-width="2" stroke-linecap="round" opacity=".7"/>`
+    case 'thoughtDots':
+      return `<g opacity=".75" fill="none" stroke="${p.line}" stroke-width="1.8">`
+        + '<circle cx="92" cy="38" r="3"/><circle cx="100" cy="28" r="4.5"/><circle cx="110" cy="16" r="6.5"/></g>'
+    case 'snow':
+      return `<g stroke="${TEAR}" stroke-linecap="round" opacity=".85">`
+        + '<path d="M18 22v12M13 25l10 6M23 25l-10 6" stroke-width="2"/>'
+        + '<path d="M102 30v9M98.5 32l7 5M105.5 32l-7 5" stroke-width="1.8" opacity=".8"/></g>'
+    case 'sweat':
+      return `<path d="M96 34c0 0-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z" fill="${TEAR}" opacity=".85"/>`
+    case 'tears':
+      return `<path d="M47 62q-2 8 1 12" stroke="${TEAR}" stroke-width="3" fill="none" stroke-linecap="round"/>`
+        + `<path d="M73 62q2 8-1 12" stroke="${TEAR}" stroke-width="3" fill="none" stroke-linecap="round"/>`
+    case 'growl':
+      return `<path d="M12 100q4-4 8 0t8 0M12 108q4-4 8 0t8 0" stroke="${p.acc}" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".7"/>`
+    case 'noiseLines':
+      return `<g opacity=".85" stroke="${p.acc}" stroke-width="2.2" fill="none" stroke-linecap="round">`
+        + '<path d="M16 44l7-7 0 6 7-7M16 58l7-7 0 6 7-7"/>'
+        + '<path d="M104 44l-7-7 0 6-7-7M104 58l-7-7 0 6-7-7"/></g>'
+    case 'shiver':
+      return `<g opacity=".75" stroke="${p.line}" stroke-width="2.2" stroke-linecap="round">`
+        + '<path d="M14 74h8M12 84h8M14 94h8"/><path d="M98 74h8M100 84h8M98 94h8"/></g>'
+    case 'ache':
+      return `<path d="M36 86l-6-6M36 86l-8 1M36 86l1-8" stroke="${p.acc}" stroke-width="2.4" stroke-linecap="round" opacity=".85"/>`
+    case 'sigh':
+      return `<path d="M90 80q10-2 13-10" stroke="${p.line}" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".55"/>`
+    case 'doorSign':
+      return `<rect x="10" y="20" width="22" height="32" rx="3" fill="${p.acc}" opacity=".9"/>`
+        + `<circle cx="27" cy="37" r="2" fill="${p.cloth}"/>`
+        + `<path d="M16 27h10" stroke="${p.cloth}" stroke-width="2.2" stroke-linecap="round"/>`
+    case 'heatDrops':
+      return `<g opacity=".85"><path d="M20 26c0 0-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z" fill="${TEAR}"/>`
+        + `<path d="M28 46c0 0-4 5-4 8a4 4 0 0 0 8 0c0-3-4-8-4-8z" fill="${TEAR}" opacity=".75"/></g>`
+  }
 }
 
 const ICONS: Record<string, string> = {
