@@ -19,6 +19,13 @@ export type DomainErrorCode =
   | 'duplicate'
   /** 찾지 못했다 */
   | 'not-found'
+  /**
+   * 기기가 허락하지 않았다.
+   *
+   * 다른 것들과 달리 **사용자가 설정에서 풀어주면 되는 일이다.** 그래서
+   * 화면이 "안 돼요" 로 끝내지 않고 어디를 눌러야 하는지 알려준다.
+   */
+  | 'not-allowed'
 
 export interface DomainError {
   readonly code: DomainErrorCode

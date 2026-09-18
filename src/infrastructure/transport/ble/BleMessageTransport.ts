@@ -10,18 +10,31 @@ import { err, ok, type Result } from '@/domain/shared/Result'
 import { decodeEnvelope, encodeEnvelope } from '../protocol/EnvelopeSchema'
 import { base64ToBytes, bytesToBase64 } from './base64'
 import { BLE_UUIDS, loadBle } from './bleModule'
+import { askForBluetooth } from './blePermission'
 import { CONSERVATIVE_MTU, chunk, decodeChunk, encodeChunk } from './chunk/Chunker'
 import { Reassembler } from './chunk/Reassembler'
 
 /**
  * 블루투스로 글을 나른다.
  *
- * **핫스팟을 못 쓸 때 남는 마지막 길이다.** 항공사가 개인 핫스팟을
- * 금지할 수 있어서 만든다.
+ * **비행기 안에서는 이것이 유일한 길이다.** 갤럭시는 비행기 모드에서
+ * Wi-Fi 를 손으로 켜도 핫스팟 메뉴가 잠긴다(2026-09-18 실제 기기 확인).
+ * 블루투스 테더링만 열리는데 아이폰은 거기 들어갈 방법이 없다.
+ * 그래서 **앱끼리 직접 잇는 이 길** 말고는 남는 것이 없다.
  *
- * 역할이 Wi-Fi 와 반대다. **아이폰이 알리고 안드로이드가 찾는다.**
- * iOS 는 화면이 꺼져도 제한적으로 알림을 이어가고, 안드로이드는 찾는
- * 동작에 제약이 적다. 각 운영체제가 잘하는 쪽에 맞췄다.
+ * Wi-Fi 는 집에서 준비하고 시험할 때 쓴다.
+ *
+ * 역할은 **아이폰이 알리고 안드로이드가 찾는다.** 안드로이드 쪽 라이브러리가
+ * 찾기만 할 수 있어서(알리기는 못 한다) 이렇게 됐다.
+ *
+ * ## 아이폰 앱이 앞에 있어야 찾힌다
+ *
+ * iOS 는 앱이 뒤로 가면 알림에서 서비스 번호를 **숨은 자리로 옮긴다.**
+ * 그 자리는 애플 기기만 읽는다. 즉 **아이폰이 뒤에 있으면 안드로이드가
+ * 새로 찾지 못한다.** 한 번 이어진 뒤에는 뒤로 가도 끊기지 않는다.
+ *
+ * 그래서 처음 이을 때만 아이폰 앱을 앞에 두면 된다. 끊긴 뒤 다시 이을
+ * 때도 마찬가지다. 화면이 이것을 알려줘야 한다.
  *
  * ## 글만 간다
  *
@@ -172,6 +185,11 @@ export class BleMessageTransport implements MessageTransport {
 
   /** 안드로이드: 상대를 찾는다 */
   private async scan(): Promise<Result<void, DomainError>> {
+    // **묻는 것이 먼저다.** 권한 없이 찾기를 시작하면 오류도 안 나고
+    // 결과만 영영 안 온다. 그러면 "상대를 못 찾았다" 로만 보인다.
+    const allowed = await askForBluetooth()
+    if (!allowed.ok) return allowed
+
     const ble = loadBle()
     if (!ble.available) return err(domainError('not-found', ble.why, 'ble'))
 

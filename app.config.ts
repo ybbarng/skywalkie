@@ -52,7 +52,10 @@ const config: ExpoConfig = {
       'android.permission.RECORD_AUDIO',
       'android.permission.MODIFY_AUDIO_SETTINGS',
       'android.permission.CAMERA',
-      'android.permission.BLUETOOTH_SCAN',
+      // `BLUETOOTH_SCAN` 은 **여기 적지 않는다.** 아래 `react-native-ble-plx`
+      // 플러그인이 `neverForLocation` 표시를 붙여서 넣어주는데, 그 플러그인은
+      // 이미 있으면 건너뛴다. 여기 적어두면 표시 없는 쪽이 먼저 들어가고
+      // **안드로이드 12 부터 아무것도 못 찾는다.**
       'android.permission.BLUETOOTH_CONNECT',
       'android.permission.BLUETOOTH_ADVERTISE',
       'android.permission.POST_NOTIFICATIONS',
@@ -99,6 +102,23 @@ const config: ExpoConfig = {
       {
         photosPermission: '사진을 골라 보내려면 앨범이 필요해요.',
         cameraPermission: '사진을 찍어 보내려면 카메라가 필요해요.',
+      },
+    ],
+    [
+      // 핫스팟을 못 쓸 때 남는 길이다.
+      //
+      // **`neverForLocation` 이 없으면 안드로이드 12 부터 아무것도 못
+      // 찾는다.** 블루투스 찾기를 위치 정보로 보기 때문에, 이 표시가
+      // 없으면 위치 권한까지 받고 위치 서비스도 켜져 있어야 한다.
+      // 오류도 안 나고 결과만 비어서 온다. 우리는 위치를 알아내지
+      // 않으므로 표시해두는 것이 맞다.
+      //
+      // `isBackgroundEnabled` 는 화면이 꺼져도 찾기를 이어가게 한다.
+      'react-native-ble-plx',
+      {
+        neverForLocation: true,
+        isBackgroundEnabled: true,
+        modes: ['central', 'peripheral'],
       },
     ],
   ],
